@@ -14,8 +14,9 @@ import pickle
 
 def fitRawODMData(filename):
     """
-    Script that opens analyzes the target data.csv file produced by LabVIEW and
+    This script opens and analyzes the target data.csv file produced by LabVIEW and
     analyzes the optical displacement of a peak relative to another peak.
+    Results are saved to the same folder as the original data file.
     
     Parameters
     ----------
@@ -91,6 +92,7 @@ def fitRawODMData(filename):
     
     print "done"    
     
+    #save calculated peak position data as csv
     sys.stdout.write("saving dataframe as csv file...")
     exportColumns = ['relativeTime','cycleNumber','direction','actuatorVoltage','displacement','displacement_mp','chiSquare_mp']
     if ('displacement_ref' in df.columns):
@@ -98,6 +100,7 @@ def fitRawODMData(filename):
     df[exportColumns].to_csv(os.path.join(commonPath,'odmanalysis.csv'),index_label='timestamp')
     sys.stdout.write("done\r\n")
     
+    #save fit results as pickled dataframe
     sys.stdout.write("pickling fit results dataframe as pcl file...")
     fitResultColumns = ['curveFitResult_mp']
     if 'curveFitResult_ref' in df.columns:
@@ -105,6 +108,7 @@ def fitRawODMData(filename):
     df[fitResultColumns].save(commonPath + '/fitResults.pcl')
     sys.stdout.write("done\r\n")
     
+    #save the used fit functions and fit settings as pickled objects
     sys.stdout.write("pickling fit functions and settings...")
     settingsDict = {'movingPeakFitSettings': movingPeakFitSettings,
                              'referencePeakFitSettings': referencePeakFitSettings if referencePeakFitSettings is not None else None}

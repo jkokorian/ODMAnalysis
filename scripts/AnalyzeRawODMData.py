@@ -3,6 +3,16 @@
 Created on Fri Dec 20 11:11:00 2013
 
 @author: jkokorian
+
+This script opens and analyzes the target data.csv file produced by LabVIEW and
+analyzes the optical displacement of a peak relative to another peak.
+
+Results are saved to the same folder as the original data file. Depending on the
+measurement type (which is determined from the data found in 'data.csv', a number
+of graphs is produced and saved.)
+
+This script calls the 'FitRawODMData' script (which only produces raw output data)
+under the hood.
 """
 
 import odmanalysis as odm
@@ -37,6 +47,6 @@ if __name__=="__main__":
     makeDisplacementPlots(df, **plotKwargs)
     makeIntensityProfilePlots(df, movingPeakFitSettings,referencePeakFitSettings, **plotKwargs)
     
-    print "ALL DONE"    
+    print "ALL DONE"
     plt.show()
     
