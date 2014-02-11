@@ -1,0 +1,286 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Dec 15 13:50:25 2013
+
+@author: jkokorian
+"""
+
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import sys
+import os
+import pandas as pd
+import numpy as np
+import scipy as cp
+from Queue import Queue, Full
+from threading import Thread
+import multiprocessing as mp
+import odmanalysis as odm
+import odmanalysis.gui as gui
+import odmanalysis.fitfunctions as ff
+from pylab import *
+
+
+class ChunkReader(object):
+    def __init__(self,path):
+        self.nlinesRead = 0
+        self.path = path
+        self.dataframes = []
+    
+    def read_next(self,*args):
+        print "reading"
+        with file(self.path,'r') as stream:
+            reader = pd.read_csv(stream,
+                        sep='\t',
+                        header=None,
+                        names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
+                        index_col='timestamp',
+                        parse_dates='timestamp',
+                        skiprows=self.nlinesRead + 1,
+                        iterator = True,
+                        chunksize = 1000,
+                        converters = {'intensityProfile': ipStringToArray})
+            
+            chunks = [chunk for chunk in reader if chunk is not None]
+            if len(chunks) > 0:
+                df = pd.concat(chunks)
+                df = df[df.intensityProfile.map(len) > 0]
+        
+        self.nlinesRead += len(df.index)
+        print "%i new lines read" % len(df.index)
+        return df
+    
+
+def ipStringToArray(ipString):
+    ip = ipString.replace('<','[')\
+                 .replace('>',']')\
+                 .replace(';',',')
+    return np.array(eval(ip))
+        
+
+
+
+
+class OMDCsvChunkHandler(FileSystemEventHandler):
+    def __init__(self,inputFile,outputFile):
+        self.inputFile = inputFile
+        
+        self.fileQueue = Queue(1)
+        self.rawDataframeQueue = Queue()
+        self.processedDataframeQueue = Queue()
+        
+        self.chunkReader = ChunkReader(inputFile)
+        self.dataProcessor = ChunkedODMDataProcessor(inputFile)
+        self.chunkWriter = ChunkWriter(outputFile)
+        
+        self.fileConsumerThread = ReturnActionConsumerThread(self.chunkReader.read_next,self.fileQueue,self.rawDataframeQueue)
+        self.odmProcessorThread = ReturnActionConsumerThread(self.dataProcessor.processDataFrame,self.rawDataframeQueue,self.processedDataframeQueue)
+        self.outputWriterThread = ReturnActionConsumerThread(self.chunkWriter.writeDataFrame,self.processedDataframeQueue)
+        
+        
+        
+    def on_modified(self, event):
+        if (event.src_path == self.inputFile):
+            try:
+                self.fileQueue.put(True,block=False)
+            except Full:
+                pass
+    
+    def startPCChain(self):
+        self.fileConsumerThread.start()
+        self.odmProcessorThread.start()
+        self.outputWriterThread.start()
+    
+    def stopPCChain(self):
+        pass
+        
+            
+
+def getPeakFitSettingsFromUser(q,df,settings):
+        movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[0],movingPeakFitFunction,
+                                                           estimatorPromptPrefix="Moving peak:",
+                                                           windowTitle="Moving Peak estimates")
+        
+        try:
+            referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[1],referencePeakFitFunction,
+                                                                      estimatorPromptPrefix="Reference peak:",
+                                                                      windowTitle="Reference Peak estimates")
+            
+            
+        except: #exception occurs if user cancels the 'dialog'
+            referencePeakFitFunction = None        
+            referencePeakFitSettings = None
+            
+        q.put({'movingPeakFitSettings': movingPeakFitSettings,
+               'referencePeakFitSettings': referencePeakFitSettings})
+
+class ChunkedODMDataProcessor(object):
+    def __init__(self,inputFile):
+        self.commonPath = os.path.abspath(os.path.split(inputFile)[0])
+        self.measurementName = os.path.split(os.path.split(inputFile)[0])[1]
+        self.curveFitSettings = None
+        self.movingPeakFitSettings = None
+        self.referencePeakFitSettings = None
+        self.popt_mp_previous = None
+        self.popt_ref_previous = None
+        
+    
+    def processDataFrame(self,df):
+        if df is None:
+            return None
+        
+        
+        if not self.curveFitSettings:
+            globalSettings = odm.CurveFitSettings.loadFromFileOrCreateDefault('./CurveFitScriptSettings.ini')
+            settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini',prototype=globalSettings)
+            gui.getSettingsFromUser(settings)
+            self.curveFitSettings = settings
+        
+        if not self.movingPeakFitSettings:
+            q = mp.Queue()
+            p = mp.Process(target=getPeakFitSettingsFromUser, args=(q,df,settings))
+            p.start()
+            settingsDict = q.get()
+            p.join()
+            self.movingPeakFitSettings = settingsDict['movingPeakFitSettings']
+            self.referencePeakFitSettings = settingsDict['referencePeakFitSettings']
+           
+        df_movingPeak = odm.calculatePeakDisplacements(df.intensityProfile, self.movingPeakFitSettings, pInitial = self.popt_mp_previous, factor=100,maxfev=20000)
+        
+        df_movingPeak.rename(columns = lambda columnName: columnName + "_mp",inplace=True)
+        df = df.join(df_movingPeak)
+        self.popt_mp_previous = df.curveFitResult_mp[-1].popt
+        
+        if (self.referencePeakFitSettings is not None):
+            df_referencePeak = odm.calculatePeakDisplacements(df.intensityProfile, self.referencePeakFitSettings, pInitial = self.popt_ref_previous, factor=100,maxfev=20000)
+            df_referencePeak.rename(columns = lambda columnName: columnName + "_ref",inplace=True)
+            df = df.join(df_referencePeak)
+            self.popt_ref_previous = df.curveFitResult_ref[-1].popt
+            df['displacement'] = df.displacement_mp - df.displacement_ref
+        else:
+            df['displacement'] = df.displacement_mp
+        
+        
+        
+        return df
+            
+
+dataframes = []
+class ChunkWriter(object):
+    def __init__(self,outputFile):
+        self.outputFile = outputFile
+        self.outStream = None
+        self.lastDataFrame = None
+    
+    def writeDataFrame(self,df):
+        print "writing"
+        
+        header = False
+        if self.outStream is None:
+            if os.path.exists(self.outputFile):
+                os.remove(outputFile)
+            self.outStream = file(outputFile,'a')
+            header = True
+        
+        if (self.lastDataFrame is not None):
+            tail = self.lastDataFrame.iloc[-2:]
+            dfC = pd.concat([tail,df])
+            odm.getActuationDirectionAndCycle(dfC,startDirection = tail.direction.iloc[0],startCycleNumber = tail.cycleNumber.iloc[0])
+            df = dfC.iloc[2:]
+        else:
+            odm.getActuationDirectionAndCycle(df)
+        
+        exportColumns = ['relativeTime','cycleNumber','direction','actuatorVoltage','displacement','displacement_mp','chiSquare_mp']
+        if ('displacement_ref' in df.columns):
+            exportColumns +=['displacement_ref','chiSquare_ref']
+        df[exportColumns].to_csv(self.outStream,index_label='timestamp',header=header)
+        print "done"
+
+
+
+class StartActionConsumerThread(Thread):
+    """
+    Monitors an inputqueue for callable items. Each dequeued item is executed.
+    """
+
+    def __init__(self,queue):
+        super(StartActionConsumerThread,self).__init__()
+        self.queue = queue
+        
+    def run(self):
+        while True:
+            action = self.queue.get()
+            self.queue.task_done()
+            action()
+
+
+class ReturnActionConsumerThread(Thread):
+    """
+    Monitors an inputQueue for data which is entered as a function argument to 'action',
+    the return data is queued into the outputQueue.
+    """    
+    
+    def __init__(self,action,inputQueue,outputQueue=None):
+        """
+        Parameters
+        ----------
+        
+        action: callable with a single argument.
+            The action that is called on each element that is dequeued from the
+            inputQueue.
+        
+        inputQueue: Queue instance
+            The consumer queue.
+            
+        outputQueue: Queue instance
+            The producer queue where return values from 'action' are written to. 
+            If None, return values are discarded.
+        """
+        
+        super(ReturnActionConsumerThread,self).__init__()
+        
+        self.action = action
+        self.inputQueue = inputQueue
+        self.outputQueue = outputQueue
+        print "consumer initialized"
+        
+    def run(self):
+        print "consumer started"
+        while True:
+            arg = self.inputQueue.get()
+            self.inputQueue.task_done()
+            value = self.action(arg)
+            if (self.outputQueue is not None): 
+                self.outputQueue.put(value)
+            
+
+
+if __name__ == "__main__":
+    if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
+        filename = sys.argv[1]
+    else:
+        filename = gui.get_path("*.csv",defaultFile="data.csv")
+    
+    commonPath = os.path.abspath(os.path.split(filename)[0])
+    inputFile = os.path.join(commonPath,"FakeLabviewData.csv")
+    outputFile = os.path.join(commonPath, "WatchdogTestOutput.csv")
+    
+    print "Now watching %s for changes" % inputFile
+    handler = OMDCsvChunkHandler(inputFile,outputFile)
+    observer = Observer()
+    observer.schedule(handler, path='.', recursive=False)
+    handler.startPCChain()
+    observer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+                
+    except (KeyboardInterrupt, SystemExit):
+        print "Stopping..."
+        observer.stop()
+        time.sleep(1)
+    observer.join()
