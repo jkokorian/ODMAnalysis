@@ -18,7 +18,7 @@ setup(name='odmanalysis',
           'numpy',
           'scipy',
           'pandas',
-          'matplotlib'
+          'matplotlib >= 1.3.1'
           ],
       scripts=[
           'scripts/AnalyzeRawODMData.py',
