@@ -6,7 +6,7 @@ setup(name='odmanalysis',
       url='http://github.com/jkokorian/odmanalysis',
       author='J. Kokorian',
       author_email='J.Kokorian@TUDelft.nl',
-      licence='MIT',
+      licence='GPL',
       packages=[
           'odmanalysis',
           'odmanalysis.gui',
@@ -18,7 +18,7 @@ setup(name='odmanalysis',
           'numpy',
           'scipy',
           'pandas',
-          'matplotlib >= 1.3.1'
+          'matplotlib'
           ],
       scripts=[
           'scripts/AnalyzeRawODMData.py',

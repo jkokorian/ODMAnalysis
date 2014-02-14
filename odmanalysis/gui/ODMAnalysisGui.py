@@ -9,10 +9,10 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import wx
 import sys
-from .. import FitFunctions
+from odmanalysis import fitfunctions as FitFunctions
 import matplotlib.pyplot as plt
 from matplotlib import patches
-from .. import ODMAnalysis as ODM
+import odmanalysis as ODM
 
 
 def get_path(wildcard,defaultFile=""):
