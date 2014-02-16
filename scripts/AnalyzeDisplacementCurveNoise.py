@@ -9,6 +9,7 @@ import numpy as np
 import scipy as cp
 import odmanalysis.gui as gui
 import odmanalysis as odm
+import odmanalysis.stats as ODMStats
 import matplotlib.pyplot as plt
 import sys
 import os
@@ -66,6 +67,12 @@ ax.set_ylabel("Displacement (nm)")
 fig, (ax1,ax2) = plt.subplots(nrows=1,ncols=2,sharex=False,sharey=True,squeeze=True)
 ax1.plot(np.arange(len(noise)),noise,'o')
 ax2.hist(noise,bins=50,orientation='horizontal',facecolor='green', alpha=0.5)
+
+sd = ODMStats.makeStatsDescriptionDict(nmPerPx * dfs.displacement)
+peakDistanceToEdge = [abs(sd['mean']-x*nmPerPx) for x in ax2.get_xlim()]
+xtext = 0.1 if peakDistanceToEdge[0] > peakDistanceToEdge[1] else 0.7
+ax2.text(xtext,0.7,ODMStats.printStatsDescriptionDict(sd),transform=ax2.transAxes)
+
 ax1.set_ylabel("Displacement (nm)")
 ax2.set_xlabel("Count")
 fig.savefig(os.path.join(commonPath,'Displacement noise.png'),dpi=150)
