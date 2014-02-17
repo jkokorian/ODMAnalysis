@@ -6,7 +6,7 @@ setup(name='odmanalysis',
       url='http://github.com/jkokorian/odmanalysis',
       author='J. Kokorian',
       author_email='J.Kokorian@TUDelft.nl',
-      licence='GPL',
+      license='GPL',
       packages=[
           'odmanalysis',
           'odmanalysis.gui',
