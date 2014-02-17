@@ -95,27 +95,8 @@ class OMDCsvChunkHandler(FileSystemEventHandler):
     def stopPCChain(self):
         pass
         
-            
+           
 
-def getPeakFitSettingsFromUser(q,df,settings):
-        movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[0],movingPeakFitFunction,
-                                                           estimatorPromptPrefix="Moving peak:",
-                                                           windowTitle="Moving Peak estimates")
-        
-        try:
-            referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[1],referencePeakFitFunction,
-                                                                      estimatorPromptPrefix="Reference peak:",
-                                                                      windowTitle="Reference Peak estimates")
-            
-            
-        except: #exception occurs if user cancels the 'dialog'
-            referencePeakFitFunction = None        
-            referencePeakFitSettings = None
-            
-        q.put({'movingPeakFitSettings': movingPeakFitSettings,
-               'referencePeakFitSettings': referencePeakFitSettings})
 
 class ChunkedODMDataProcessor(object):
     def __init__(self,inputFile):
@@ -135,7 +116,7 @@ class ChunkedODMDataProcessor(object):
         
         if not self.curveFitSettings:
             globalSettings = odm.CurveFitSettings.loadFromFileOrCreateDefault('./CurveFitScriptSettings.ini')
-            settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini',prototype=globalSettings)
+            settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(self.commonPath + '/odmSettings.ini',prototype=globalSettings)
             gui.getSettingsFromUser(settings)
             self.curveFitSettings = settings
         
@@ -182,7 +163,7 @@ class ChunkWriter(object):
         if self.outStream is None:
             if os.path.exists(self.outputFile):
                 os.remove(outputFile)
-            self.outStream = file(outputFile,'a')
+            self.outStream = file(self.outputFile,'a')
             header = True
         
         if (self.lastDataFrame is not None):
@@ -257,21 +238,39 @@ class ReturnActionConsumerThread(Thread):
                 self.outputQueue.put(value)
             
 
+def getPeakFitSettingsFromUser(q,df,settings):
+        movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[0],movingPeakFitFunction,
+                                                           estimatorPromptPrefix="Moving peak:",
+                                                           windowTitle="Moving Peak estimates")
+        
+        try:
+            referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[1],referencePeakFitFunction,
+                                                                      estimatorPromptPrefix="Reference peak:",
+                                                                      windowTitle="Reference Peak estimates")
+            
+            
+        except: #exception occurs if user cancels the 'dialog'
+            referencePeakFitFunction = None        
+            referencePeakFitSettings = None
+            
+        q.put({'movingPeakFitSettings': movingPeakFitSettings,
+               'referencePeakFitSettings': referencePeakFitSettings})
 
-if __name__ == "__main__":
+def main():
     if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
         filename = sys.argv[1]
     else:
         filename = gui.get_path("*.csv",defaultFile="data.csv")
     
     commonPath = os.path.abspath(os.path.split(filename)[0])
-    inputFile = os.path.join(commonPath,"FakeLabviewData.csv")
     outputFile = os.path.join(commonPath, "WatchdogTestOutput.csv")
     
-    print "Now watching %s for changes" % inputFile
-    handler = OMDCsvChunkHandler(inputFile,outputFile)
+    print "Now watching %s for changes" % filename
+    handler = OMDCsvChunkHandler(filename,outputFile)
     observer = Observer()
-    observer.schedule(handler, path='.', recursive=False)
+    observer.schedule(handler, path=commonPath, recursive=False)
     handler.startPCChain()
     observer.start()
 
@@ -284,3 +283,7 @@ if __name__ == "__main__":
         observer.stop()
         time.sleep(1)
     observer.join()
+    
+
+if __name__ == "__main__":
+    main()
