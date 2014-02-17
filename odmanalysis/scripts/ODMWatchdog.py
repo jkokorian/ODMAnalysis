@@ -110,7 +110,7 @@ class ChunkedODMDataProcessor(object):
         
     
     def processDataFrame(self,df):
-        if df is None:
+        if df is None or len(df.index) == 0:
             return None
         
         
@@ -143,8 +143,6 @@ class ChunkedODMDataProcessor(object):
             df['displacement'] = df.displacement_mp - df.displacement_ref
         else:
             df['displacement'] = df.displacement_mp
-        
-        
         
         return df
             
