@@ -110,7 +110,7 @@ class ChunkedODMDataProcessor(object):
         
     
     def processDataFrame(self,df):
-        if df is None or len(df.index) == 0:
+        if df is None:
             return None
         
         
