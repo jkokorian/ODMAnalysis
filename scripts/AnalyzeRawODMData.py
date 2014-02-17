@@ -27,8 +27,7 @@ import matplotlib.pyplot as plt
 
 
 ##main script##
-
-if __name__=="__main__":
+def main():
     if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
         filename = sys.argv[1]
     else:
@@ -49,4 +48,7 @@ if __name__=="__main__":
     
     print "ALL DONE"
     plt.show()
-    
+
+
+if __name__=="__main__":
+    main()    

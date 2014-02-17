@@ -12,7 +12,7 @@ import odmanalysis.gui as gui
 import os
 import sys
 
-if __name__ == "__main__":
+def main():
     if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
         filename = sys.argv[1]
     else:
@@ -31,3 +31,5 @@ if __name__ == "__main__":
     os.remove(filename+".old")
     print "DONE"
         
+if __name__ == "__main__":
+    main()    

@@ -111,7 +111,8 @@ def makeIntensityProfilePlots(df,movingPeakFitSettings,referencePeakFitSettings,
         odmp.plotIntensityProfiles(df,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10, filename = savePath +"/IntensityProfiles.png",**kwargs)
     
 
-if __name__ == "__main__":
+def main():
+
     if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
         filename = sys.argv[1]
     else:
@@ -135,3 +136,6 @@ if __name__ == "__main__":
     
     
     plt.show()
+
+if __name__ == "__main__":
+    main()
