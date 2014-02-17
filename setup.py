@@ -13,7 +13,7 @@ setup(name='odmanalysis',
           'odmanalysis.plots',
           'odmanalysis.fitfunctions',
           'odmanalysis.stats',
-	  'odmanalysis.scripts'
+          'odmanalysis.scripts'
           ],
       install_requires=[
           'numpy',
@@ -26,6 +26,7 @@ setup(name='odmanalysis',
               'odm_analyze=odmanalysis.scripts.AnalyzeRawODMData:main',
               'odm_plot=odmanalysis.scripts.MakeODMPlots:main',
               'odm_fit=odmanalysis.scripts.FitRawODMData:main',
-              'odm_noise=odmanalysis.scripts.AnalyzeDisplacementCurveNoise:main'
+              'odm_noise=odmanalysis.scripts.AnalyzeDisplacementCurveNoise:main',
+              'omd_watch=odmanalysis.scripts.ODMWatchdog:main'
           ]},
       zip_safe=False)
