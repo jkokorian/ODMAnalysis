@@ -20,10 +20,11 @@ setup(name='odmanalysis',
           'pandas',
           'matplotlib'
           ],
-      scripts=[
-          'scripts/AnalyzeRawODMData.py',
-          'scripts/MakeODMPlots.py',
-          'scripts/FitRawODMData.py',
-          'scripts/AnalyzeDisplacementCurveNoise.py'
-          ],
+      entry_points={
+          'console_scripts': [
+              'odm_analyze=odmanalysis.AnalyzeRawODMData:main',
+              'odm_plot=odmanalysis.MakeODMPlots:main',
+              'odm_fit=odmanalysis.FitRawODMData:main',
+              'odm_noise=odmanalysis.AnalyzeDisplacementCurveNoise:main'
+          ]},
       zip_safe=False)
