@@ -27,6 +27,6 @@ setup(name='odmanalysis',
               'odm_plot=odmanalysis.scripts.MakeODMPlots:main',
               'odm_fit=odmanalysis.scripts.FitRawODMData:main',
               'odm_noise=odmanalysis.scripts.AnalyzeDisplacementCurveNoise:main',
-              'omd_watch=odmanalysis.scripts.ODMWatchdog:main'
+              'odm_watch=odmanalysis.scripts.ODMWatchdog:main'
           ]},
       zip_safe=False)
