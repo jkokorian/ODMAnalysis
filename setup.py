@@ -19,7 +19,8 @@ setup(name='odmanalysis',
           'numpy',
           'scipy',
           'pandas',
-          'matplotlib'
+          'matplotlib',
+	  'watchdog'
           ],
       entry_points={
           'console_scripts': [
