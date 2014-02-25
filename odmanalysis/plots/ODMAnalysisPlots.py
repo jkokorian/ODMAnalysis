@@ -132,12 +132,12 @@ def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,n
         
         xValues_mp = np.arange(movingPeakFitSettings.xminBound,movingPeakFitSettings.xmaxBound)
         
-        plt.plot(dfRaw.intensityProfile[i],'b')
-        plt.plot(xValues_mp,movingPeakFitSettings.fitFunction(xValues_mp,*dfRaw.curveFitResult_mp[i].popt),'r--')
+        plt.plot(dfRaw.intensityProfile.iloc[i],'b')
+        plt.plot(xValues_mp,movingPeakFitSettings.fitFunction(xValues_mp,*dfRaw.curveFitResult_mp.iloc[i].popt),'r--')
         
         if referencePeakFitSettings:
             xValues_ref = np.arange(referencePeakFitSettings.xminBound,referencePeakFitSettings.xmaxBound)                
-            plt.plot(xValues_ref,referencePeakFitSettings.fitFunction(xValues_ref,*dfRaw.curveFitResult_ref[i].popt),'g--')
+            plt.plot(xValues_ref,referencePeakFitSettings.fitFunction(xValues_ref,*dfRaw.curveFitResult_ref.iloc[i].popt),'g--')
     
     ty = axes.twiny()
     ty.set_xlabel('x ($\mu$m)')

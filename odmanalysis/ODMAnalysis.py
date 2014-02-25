@@ -362,17 +362,17 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
     if pInitial is not None:        
         p0 = pInitial
     else:
-        estimatesDict = fitFunction.estimateInitialParameters(intensityProfiles[0], **peakFitSettings.estimatorValuesDict)
+        estimatesDict = fitFunction.estimateInitialParameters(intensityProfiles.iloc[0], **peakFitSettings.estimatorValuesDict)
         p0 = estimatesDict.values()
         
     xmin = peakFitSettings.xminBound
     xmax = peakFitSettings.xmaxBound
-    xdata = np.arange(len(intensityProfiles[0]))[xmin:xmax]
+    xdata = np.arange(len(intensityProfiles.iloc[0]))[xmin:xmax]
     
     progress = 0.0
     total = len(df.index)
     for i in df.index:
-         ydata = intensityProfiles[i][xmin:xmax]
+         ydata = intensityProfiles.get_value(i)[xmin:xmax]
          popt,pcov = curve_fit(fitFunction,\
                   xdata = xdata,\
                   ydata = ydata,\
