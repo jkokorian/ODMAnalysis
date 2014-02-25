@@ -52,13 +52,13 @@ def fitRawODMData(filename):
     gui.getSettingsFromUser(settings)
     
     movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-    movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[1],movingPeakFitFunction,
+    movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],movingPeakFitFunction,
                                                        estimatorPromptPrefix="Moving peak:",
                                                        windowTitle="Moving Peak estimates")
     
     try:
         referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-        referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[1],referencePeakFitFunction,
+        referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
                                                                   estimatorPromptPrefix="Reference peak:",
                                                                   windowTitle="Reference Peak estimates")
     except: #exception occurs if user cancels the 'dialog'
