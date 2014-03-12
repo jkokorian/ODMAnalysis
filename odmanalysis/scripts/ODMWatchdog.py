@@ -12,14 +12,13 @@ import sys
 import os
 import pandas as pd
 import numpy as np
-import scipy as cp
 from Queue import Queue, Full
 from threading import Thread
 import multiprocessing as mp
 import odmanalysis as odm
 import odmanalysis.gui as gui
 import odmanalysis.fitfunctions as ff
-from pylab import *
+
 
 
 class ChunkReader(object):
@@ -51,6 +50,37 @@ class ChunkReader(object):
         print "%i new lines read" % len(df.index)
         return df
     
+
+class ChunkWriter(object):
+    def __init__(self,outputFile):
+        self.outputFile = outputFile
+        self.outStream = None
+        self.lastDataFrame = None
+    
+    def writeDataFrame(self,df):
+        print "writing"
+        
+        header = False
+        if self.outStream is None:
+            if os.path.exists(self.outputFile):
+                os.remove(self.outputFile)
+            self.outStream = file(self.outputFile,'a')
+            header = True
+        
+        if (self.lastDataFrame is not None):
+            tail = self.lastDataFrame.iloc[-2:]
+            dfC = pd.concat([tail,df])
+            odm.getActuationDirectionAndCycle(dfC,startDirection = tail.direction.iloc[1],startCycleNumber = tail.cycleNumber.iloc[1])
+            df = dfC.iloc[2:]
+        else:
+            odm.getActuationDirectionAndCycle(df)
+        
+        exportColumns = ['relativeTime','cycleNumber','direction','actuatorVoltage','displacement','displacement_mp','chiSquare_mp']
+        if ('displacement_ref' in df.columns):
+            exportColumns +=['displacement_ref','chiSquare_ref']
+        df[exportColumns].to_csv(self.outStream,index_label='timestamp',header=header)
+        print "done"
+
 
 def ipStringToArray(ipString):
     ip = ipString.replace('<','[')\
@@ -95,7 +125,41 @@ class OMDCsvChunkHandler(FileSystemEventHandler):
     def stopPCChain(self):
         pass
         
-           
+
+class AsyncRawODMDataFitter(object):
+    def __init__(self,inputFile,outputFile):
+        self.inputFile = inputFile
+        
+        self.rawDataframeQueue = Queue(1)
+        self.processedDataframeQueue = Queue()
+        
+        self.reader = odm.getODMDataReader(inputFile)
+        self.dataProcessor = ChunkedODMDataProcessor(inputFile)
+        self.chunkWriter = ChunkWriter(outputFile)
+        
+        
+        def read():
+            while True:
+                df = self.reader.get_chunk()
+                if df is not None:
+                    df = df[df.intensityProfile.map(len) > 0]
+                    if len(df) is not 0:
+                        self.rawDataframeQueue.put(df)
+                else:
+                    break;
+                
+        self.readerThread = Thread(target=read)
+        self.odmProcessorThread = ReturnActionConsumerThread(self.dataProcessor.processDataFrame,self.rawDataframeQueue,self.processedDataframeQueue)
+        self.outputWriterThread = ReturnActionConsumerThread(self.chunkWriter.writeDataFrame,self.processedDataframeQueue)
+        
+    
+    def startPCChain(self):
+        self.readerThread.start()
+        self.odmProcessorThread.start()
+        self.outputWriterThread.start()
+    
+    def stopPCChain(self):
+        pass
 
 
 class ChunkedODMDataProcessor(object):
@@ -113,6 +177,7 @@ class ChunkedODMDataProcessor(object):
         if df is None:
             return None
         
+        print "processing %s - %s" % (df.index.min(),df.index.max())
         
         if not self.curveFitSettings:
             globalSettings = odm.CurveFitSettings.loadFromFileOrCreateDefault('./CurveFitScriptSettings.ini')
@@ -147,36 +212,8 @@ class ChunkedODMDataProcessor(object):
         return df
             
 
-dataframes = []
-class ChunkWriter(object):
-    def __init__(self,outputFile):
-        self.outputFile = outputFile
-        self.outStream = None
-        self.lastDataFrame = None
-    
-    def writeDataFrame(self,df):
-        print "writing"
-        
-        header = False
-        if self.outStream is None:
-            if os.path.exists(self.outputFile):
-                os.remove(outputFile)
-            self.outStream = file(self.outputFile,'a')
-            header = True
-        
-        if (self.lastDataFrame is not None):
-            tail = self.lastDataFrame.iloc[-2:]
-            dfC = pd.concat([tail,df])
-            odm.getActuationDirectionAndCycle(dfC,startDirection = tail.direction.iloc[0],startCycleNumber = tail.cycleNumber.iloc[0])
-            df = dfC.iloc[2:]
-        else:
-            odm.getActuationDirectionAndCycle(df)
-        
-        exportColumns = ['relativeTime','cycleNumber','direction','actuatorVoltage','displacement','displacement_mp','chiSquare_mp']
-        if ('displacement_ref' in df.columns):
-            exportColumns +=['displacement_ref','chiSquare_ref']
-        df[exportColumns].to_csv(self.outStream,index_label='timestamp',header=header)
-        print "done"
+
+
 
 
 
@@ -238,13 +275,13 @@ class ReturnActionConsumerThread(Thread):
 
 def getPeakFitSettingsFromUser(q,df,settings):
         movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[0],movingPeakFitFunction,
+        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[0],movingPeakFitFunction,
                                                            estimatorPromptPrefix="Moving peak:",
                                                            windowTitle="Moving Peak estimates")
         
         try:
             referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile[1],referencePeakFitFunction,
+            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
                                                                       estimatorPromptPrefix="Reference peak:",
                                                                       windowTitle="Reference Peak estimates")
             

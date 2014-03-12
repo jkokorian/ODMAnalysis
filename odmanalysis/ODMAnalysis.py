@@ -17,6 +17,12 @@ import pickle
 import copy
 
 
+def ipStringToArray(ipString):
+        ip = ipString.replace('<','[')\
+                     .replace('>',']')\
+                     .replace(';',',')
+        return np.array(eval(ip))
+
 def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward',startCycleNumber=1):
     """
     Determines the actuation direction from the actuatorVoltage column of the
@@ -82,18 +88,15 @@ def readODMData(dataFilePath,progressReporter=StdOutProgressReporter()):
     
     progressReporter.message('loading data from %s ...' % dataFilePath)
     reader = pd.read_csv(dataFilePath, 
-                         sep='\t',names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
+                         sep='\t',
+                         names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
                          skiprows=1,
                          header=None,
                          parse_dates='timestamp',
                          index_col='timestamp', 
                          chunksize=2005)
     
-    def ipStringToArray(ipString):
-        ip = ipString.replace('<','[')\
-                     .replace('>',']')\
-                     .replace(';',',')
-        return np.array(eval(ip))
+    
     
     chunks=[]
     for chunk in reader:
@@ -110,7 +113,39 @@ def readODMData(dataFilePath,progressReporter=StdOutProgressReporter()):
     progressReporter.done()
     
     return df
+    
 
+def getODMDataReader(dataFilePath,chunksize=2005):
+    """
+    Reads a data.csv file that has been written by a LabVIEW ODM Measurement and returns
+    a pandas reader object to process the file in chunks.
+    
+        
+    Parameters
+    ----------
+
+    dataFilePath : string
+        Path string to the data.csv file that contains the raw odm data.
+    
+
+    
+    Returns
+    -------
+    reader: pandas.csv_reader,
+        
+    """
+    
+    reader = pd.read_csv(dataFilePath,
+                        sep='\t',
+                        header=None,
+                        names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
+                        index_col='timestamp',
+                        parse_dates='timestamp',
+                        skiprows=1,
+                        chunksize = chunksize,
+                        converters = {'intensityProfile': ipStringToArray})
+    
+    return reader
 
 def readAnalysisData(dataFilePath):
     """
