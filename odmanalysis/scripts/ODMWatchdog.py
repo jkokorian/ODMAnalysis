@@ -129,41 +129,6 @@ class OMDCsvChunkHandler(FileSystemEventHandler):
         pass
         
 
-class AsyncRawODMDataFitter(object):
-    def __init__(self,inputFile,outputFile):
-        self.inputFile = inputFile
-        
-        self.rawDataframeQueue = Queue(1)
-        self.processedDataframeQueue = Queue()
-        
-        self.reader = odm.getODMDataReader(inputFile)
-        self.dataProcessor = ChunkedODMDataProcessor(inputFile)
-        self.chunkWriter = ChunkWriter(outputFile)
-        
-        
-        def read():
-            while True:
-                df = self.reader.get_chunk()
-                if df is not None:
-                    df = df[df.intensityProfile.map(len) > 0]
-                    if len(df) is not 0:
-                        self.rawDataframeQueue.put(df)
-                else:
-                    break;
-                
-        self.readerThread = Thread(target=read)
-        self.odmProcessorThread = ReturnActionConsumerThread(self.dataProcessor.processDataFrame,self.rawDataframeQueue,self.processedDataframeQueue)
-        self.outputWriterThread = ReturnActionConsumerThread(self.chunkWriter.writeDataFrame,self.processedDataframeQueue)
-        
-    
-    def startPCChain(self):
-        self.readerThread.start()
-        self.odmProcessorThread.start()
-        self.outputWriterThread.start()
-    
-    def stopPCChain(self):
-        pass
-
 
 class ChunkedODMDataProcessor(object):
     def __init__(self,inputFile):
