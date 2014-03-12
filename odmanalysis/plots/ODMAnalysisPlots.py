@@ -8,7 +8,9 @@ Created on Tue Dec 17 09:57:12 2013
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpld
+from matplotlib import animation
 from odmanalysis import stats as ODMStats
+
 
 
 def hasMultipleCycles(odmAnalysisDataFrame):
