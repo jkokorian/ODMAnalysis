@@ -15,13 +15,15 @@ import ConfigParser
 from ProgressReporting import StdOutProgressReporter
 import pickle
 import copy
+import re
 
+__ipStringRegex = re.compile("(\d+)")
 
 def ipStringToArray(ipString):
-        ip = ipString.replace('<','[')\
-                     .replace('>',']')\
-                     .replace(';',',')
-        return np.array(eval(ip))
+    
+    return np.array([int(i) for i in __ipStringRegex.findall(ipString)])
+
+        
 
 def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward',startCycleNumber=1):
     """
