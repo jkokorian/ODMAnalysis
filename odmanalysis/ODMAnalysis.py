@@ -44,6 +44,12 @@ def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward
     -------
     
     The target dataframe or a new dataframe depending on the 'inplace' parameter.
+    
+    
+    Comments
+    --------
+    
+    TODO: function does not work when dataframe is a chunk
     """
     if inplace == True:
         df = dataframe
@@ -329,15 +335,7 @@ class OpticsSettings(object):
         with file(self.configFile,'w') as fp:
             cp.write(fp)
     
-    @classmethod
-    def loadFromFileOrCreateDefault(cls,filename):
-        if (os.path.isfile(filename)):
-            return OpticsSettings.loadFromFile(filename)
-        else:
-            s = OpticsSettings()
-            s.saveToFile(filename)
-            return s
-
+    
 class ODAFitSettings(object):
     def __init__(self,fitFunction,estimatorValuesDict):
         self.xminBound = int(round(estimatorValuesDict['minBound'][0]))
