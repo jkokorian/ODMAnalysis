@@ -74,11 +74,14 @@ class ChunkWriter(object):
             df = dfC.iloc[2:]
         else:
             odm.getActuationDirectionAndCycle(df)
+            
         
         exportColumns = ['relativeTime','cycleNumber','direction','actuatorVoltage','displacement','displacement_mp','chiSquare_mp']
         if ('displacement_ref' in df.columns):
             exportColumns +=['displacement_ref','chiSquare_ref']
         df[exportColumns].to_csv(self.outStream,index_label='timestamp',header=header)
+        
+        self.lastDataFrame = df
         print "done"
 
 
@@ -184,6 +187,7 @@ class ChunkedODMDataProcessor(object):
             settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(self.commonPath + '/odmSettings.ini',prototype=globalSettings)
             gui.getSettingsFromUser(settings)
             self.curveFitSettings = settings
+            settings.saveToFile()
         
         if not self.movingPeakFitSettings:
             q = mp.Queue()

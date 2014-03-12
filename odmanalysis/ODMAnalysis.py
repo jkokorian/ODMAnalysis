@@ -46,10 +46,7 @@ def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward
     The target dataframe or a new dataframe depending on the 'inplace' parameter.
     
     
-    Comments
-    --------
     
-    TODO: function does not work when dataframe is a chunk
     """
     if inplace == True:
         df = dataframe
