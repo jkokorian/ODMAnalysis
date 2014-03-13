@@ -29,16 +29,7 @@ class ChunkReader(object):
     def read_next(self,*args):
         print "reading"
         with file(self.path,'r') as stream:
-            reader = pd.read_csv(stream,
-                        sep='\t',
-                        header=None,
-                        names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
-                        index_col='timestamp',
-                        parse_dates='timestamp',
-                        skiprows=self.nlinesRead + 1,
-                        iterator = True,
-                        chunksize = 1000,
-                        converters = {'intensityProfile': ipStringToArray})
+            reader = odm.getODMDataReader(stream,chunksize=1000, skipDataRows=self.nlinesRead)
             
             chunks = [chunk for chunk in reader if chunk is not None]
             if len(chunks) > 0:
@@ -82,15 +73,6 @@ class ChunkWriter(object):
         
         self.lastDataFrame = df
         print "done"
-
-
-def ipStringToArray(ipString):
-    ip = ipString.replace('<','[')\
-                 .replace('>',']')\
-                 .replace(';',',')
-    return np.array(eval(ip))
-        
-
 
 
 
@@ -181,10 +163,6 @@ class ChunkedODMDataProcessor(object):
             
 
 
-
-
-
-
 class StartActionConsumerThread(Thread):
     """
     Monitors an inputqueue for callable items. Each dequeued item is executed.
@@ -268,7 +246,7 @@ def main():
         filename = gui.get_path("*.csv",defaultFile="data.csv")
     
     commonPath = os.path.abspath(os.path.split(filename)[0])
-    outputFile = os.path.join(commonPath, "WatchdogTestOutput.csv")
+    outputFile = os.path.join(commonPath, "odmanalysis.csv")
     
     print "Now watching %s for changes" % filename
     handler = OMDCsvChunkHandler(filename,outputFile)

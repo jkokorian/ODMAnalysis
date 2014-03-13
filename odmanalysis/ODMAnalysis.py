@@ -124,12 +124,14 @@ def getODMDataReader(dataFilePath,chunksize=2005,skipDataRows=0):
         The amount of lines to read at once from disk
         
     skipDataRows : integer
+        The amount of rows to skip, excluding the header
         
 
     
     Returns
     -------
-    reader: pandas.csv_reader,
+    reader: pandas.csv_reader
+        Reader object for reading the target dataFile in chunks
         
     """
     
