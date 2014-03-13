@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='odmanalysis',
-      version='0.3',
+      version='0.4',
       description='Toolkit for analyzing optical displacement measurements with subpixel accuracy.',
       url='http://github.com/jkokorian/odmanalysis',
       author='J. Kokorian',
@@ -27,6 +27,7 @@ setup(name='odmanalysis',
               'odm_analyze=odmanalysis.scripts.AnalyzeRawODMData:main',
               'odm_plot=odmanalysis.scripts.MakeODMPlots:main',
               'odm_fit=odmanalysis.scripts.FitRawODMData:main',
+	      'odm_fitfast=odmanalysis.scripts.FitLargeRawODMData:main',
               'odm_noise=odmanalysis.scripts.AnalyzeDisplacementCurveNoise:main',
               'odm_watch=odmanalysis.scripts.ODMWatchdog:main',
               'odm_clean_data=odmanalysis.scripts.RemoveUnitsFromRawData:main'

@@ -62,6 +62,7 @@ def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
     kwargs = {'measurementName': measurementName, 'nmPerPx' : nmPerPx}
             
     if odmp.hasConstantVoltage(df):
+        print "Making plots for constant voltage"
         if showReferenceValues:
             odmp.plotConstantDisplacementHistogram(df,source='mp', filename = savePath + '/Position_histogram_mp.png', **kwargs)
             odmp.plotConstantDisplacementHistogram(df,source='ref', filename = savePath + '/Position_histogram_ref.png', **kwargs)
@@ -76,8 +77,11 @@ def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
         odmp.plotChiSquare(df, filename = savePath +"/chi-squared.png", **kwargs)
         
         if odmp.hasMultipleCycles(df):
-            odmp.plotMultiCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.png", **kwargs)
-            odmp.plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues = showReferenceValues,filename = savePath +"/Voltage-Displacement_Mean.png", **kwargs)
+            if (df.cycleNumber.max() <= 200):
+                odmp.plotMultiCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.png", **kwargs)
+                odmp.plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues = showReferenceValues,filename = savePath +"/Voltage-Displacement_Mean.png", **kwargs)
+            
+            #odmp.animateMultiCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.mp4", **kwargs)
             
         else:
             odmp.plotSingleCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.png", **kwargs)

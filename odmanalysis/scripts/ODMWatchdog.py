@@ -20,7 +20,6 @@ import odmanalysis.gui as gui
 import odmanalysis.fitfunctions as ff
 
 
-
 class ChunkReader(object):
     def __init__(self,path):
         self.nlinesRead = 0
