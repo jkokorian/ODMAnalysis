@@ -18,11 +18,9 @@ import copy as _copy
 import re as _re
 
 
-__ipStringRegex = _re.compile("(\d+)")
-
 
 def ipStringToArray(ipString):    
-    return _np.array([int(i) for i in __ipStringRegex.findall(ipString)])
+    return _np.array([int(i) for i in ipString.replace("<","").replace(">","").split(";") if i])
 
 def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward',startCycleNumber=1):
     """
@@ -78,7 +76,7 @@ def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     ----------
 
     dataFilePath : string
-        Path string to the data.csv file that contains the raw odm data.
+        Path string to the data.csv file that contains the raw odm data or a stream object.
     progressReporter : ODMAnalysisGui.ProgressReporter
         The ProgressReporter to use. If None (default) a StdOutProgressReporter is used.
 
@@ -91,20 +89,11 @@ def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     """
     
     progressReporter.message('loading data from %s ...' % dataFilePath)
-    reader = _pd.read_csv(dataFilePath, 
-                         sep='\t',
-                         names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
-                         skiprows=1,
-                         header=None,
-                         parse_dates='timestamp',
-                         index_col='timestamp', 
-                         chunksize=2005)
-    
-    
+    reader = getODMDataReader(dataFilePath)
+        
     
     chunks=[]
     for chunk in reader:
-        chunk.intensityProfile = chunk.intensityProfile.map(ipStringToArray)
         chunks.append(chunk)
         print "%s - %s" % (chunk.index.min(),chunk.index.max())
     
@@ -119,7 +108,7 @@ def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     return df
     
 
-def getODMDataReader(dataFilePath,chunksize=2005):
+def getODMDataReader(dataFilePath,chunksize=2005,skipDataRows=0):
     """
     Reads a data.csv file that has been written by a LabVIEW ODM Measurement and returns
     a pandas reader object to process the file in chunks.
@@ -129,8 +118,13 @@ def getODMDataReader(dataFilePath,chunksize=2005):
     ----------
 
     dataFilePath : string
-        Path string to the data.csv file that contains the raw odm data.
+        Path string to the data.csv file that contains the raw odm data or a stream object.
     
+    chunksize : integer
+        The amount of lines to read at once from disk
+        
+    skipDataRows : integer
+        
 
     
     Returns
@@ -145,7 +139,7 @@ def getODMDataReader(dataFilePath,chunksize=2005):
                         names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
                         index_col='timestamp',
                         parse_dates='timestamp',
-                        skiprows=1,
+                        skiprows=skipDataRows + 1,
                         chunksize = chunksize,
                         converters = {'intensityProfile': ipStringToArray})
     
@@ -334,7 +328,7 @@ class OpticsSettings(object):
             cp.write(fp)
     
     
-class ODAFitSettings(object):<!-- language: c# -->
+class ODAFitSettings(object):
     def __init__(self,fitFunction,estimatorValuesDict):
         self.xminBound = int(round(estimatorValuesDict['minBound'][0]))
         self.xmaxBound = int(round(estimatorValuesDict['maxBound'][0]))
