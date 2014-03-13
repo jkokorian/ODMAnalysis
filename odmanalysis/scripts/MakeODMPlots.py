@@ -81,7 +81,7 @@ def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
                 odmp.plotMultiCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.png", **kwargs)
                 odmp.plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues = showReferenceValues,filename = savePath +"/Voltage-Displacement_Mean.png", **kwargs)
             
-            #odmp.animateMultiCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.mp4", **kwargs)
+            odmp.animateMultiCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.mp4", **kwargs)
             
         else:
             odmp.plotSingleCycleVoltageDisplacement(df,corrected=False, showReferenceValues = showReferenceValues, filename = savePath +"/Voltage-Displacement.png", **kwargs)
