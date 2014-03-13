@@ -120,18 +120,18 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     
     # animation function.  This is called sequentially
     def animate(i_frame):
-        print i_frame
-        dfc = df[df.cycleNumber == i_frame]
+        dfc = df[df.cycleNumber == i_frame+1]
         fwd = dfc[dfc.direction == "forward"]
         bwd = dfc[dfc.direction == "backward"]
         fwdline.set_data(fwd.actuatorVoltage, fwd.displacement)
         bwdline.set_data(bwd.actuatorVoltage, bwd.displacement)
-        text.set_text("cycle %i" % i_frame)
+        text.set_text("cycle %i" % (i_frame+1))
         return fwdline,bwdline,text,
     
     # call the animator.  blit=True means only re-draw the parts that have changed.
+    numberOfFrames = int(df.cycleNumber.max())
     anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=20, interval=20, blit=True)
+                                   frames=numberOfFrames, interval=20, blit=True)
     
     # save the animation as an mp4.  This requires ffmpeg or mencoder to be
     # installed.  The extra_args ensure that the x264 codec is used, so that
