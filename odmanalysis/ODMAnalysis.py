@@ -5,25 +5,24 @@ Created on Tue Aug 20 10:47:31 2013
 @author: jkokorian
 """
 
-from __future__ import division
-import numpy as np
-import pandas as pd
-from scipy.optimize import curve_fit
-from scipy.stats import chisquare
-import os
-import ConfigParser
-from ProgressReporting import StdOutProgressReporter
-import pickle
-import copy
-import re
+from __future__ import division as _division
+import numpy as _np
+import pandas as _pd
+from scipy.optimize import curve_fit as _curve_fit
+from scipy.stats import chisquare as _chisquare
+import os as _os
+import ConfigParser as _ConfigParser
+from ProgressReporting import StdOutProgressReporter as _StdOutProgressReporter
+import pickle as _pickle
+import copy as _copy
+import re as _re
 
-__ipStringRegex = re.compile("(\d+)")
 
-def ipStringToArray(ipString):
-    
-    return np.array([int(i) for i in __ipStringRegex.findall(ipString)])
+__ipStringRegex = _re.compile("(\d+)")
 
-        
+
+def ipStringToArray(ipString):    
+    return _np.array([int(i) for i in __ipStringRegex.findall(ipString)])
 
 def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward',startCycleNumber=1):
     """
@@ -53,21 +52,21 @@ def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward
     if inplace == True:
         df = dataframe
     else:
-        df = pd.DataFrame(index=dataframe.index)
+        df = _pd.DataFrame(index=dataframe.index)
     
     df['direction'] = 'forward'
     df.direction.iloc[0] = startDirection
     df.direction[dataframe.actuatorVoltage.diff() < 0] = 'backward'
     
     s = (df.direction != df.direction.shift(1))
-    baseCycleNumbers = pd.Series(np.arange(len(s[s==True])),index=s[s==True].index)
+    baseCycleNumbers = _pd.Series(_np.arange(len(s[s==True])),index=s[s==True].index)
     baseCycleNumbers = baseCycleNumbers //2
     
     df['cycleNumber'] = baseCycleNumbers + startCycleNumber
     df.cycleNumber.fillna(method='pad',inplace=True)
     return df
 
-def readODMData(dataFilePath,progressReporter=StdOutProgressReporter()):
+def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     """
     Reads a data.csv file that has been written by a LabVIEW ODM Measurement and returns
     it as a dataframe. It also determines the cyclenumber and direction.
@@ -92,7 +91,7 @@ def readODMData(dataFilePath,progressReporter=StdOutProgressReporter()):
     """
     
     progressReporter.message('loading data from %s ...' % dataFilePath)
-    reader = pd.read_csv(dataFilePath, 
+    reader = _pd.read_csv(dataFilePath, 
                          sep='\t',
                          names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
                          skiprows=1,
@@ -109,7 +108,7 @@ def readODMData(dataFilePath,progressReporter=StdOutProgressReporter()):
         chunks.append(chunk)
         print "%s - %s" % (chunk.index.min(),chunk.index.max())
     
-    df = pd.concat(chunks)
+    df = _pd.concat(chunks)
     
     df = df[df.intensityProfile.map(len) != 0]
     
@@ -140,7 +139,7 @@ def getODMDataReader(dataFilePath,chunksize=2005):
         
     """
     
-    reader = pd.read_csv(dataFilePath,
+    reader = _pd.read_csv(dataFilePath,
                         sep='\t',
                         header=None,
                         names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
@@ -171,7 +170,7 @@ def readAnalysisData(dataFilePath):
         set to 'timestamp'.
     """
 
-    df = pd.read_csv(dataFilePath,index_col='timestamp',parse_dates='timestamp')
+    df = _pd.read_csv(dataFilePath,index_col='timestamp',parse_dates='timestamp')
     return df
 
 
@@ -195,7 +194,7 @@ def readCurveFitSettings(fitSettingsPcl):
     """
 
     with file(fitSettingsPcl,'r') as f:    
-        ffDict = pickle.load(f)
+        ffDict = _pickle.load(f)
     
     return ffDict
 
@@ -218,7 +217,7 @@ def readCurveFitResults(fitResultsPcl):
         The index of the dataframe is equal to the 'timestamp' column of the corresponding 'odmanalysis.csv' file.
     """
     
-    df = pd.DataFrame.load(fitResultsPcl)
+    df = _pd.DataFrame.load(fitResultsPcl)
     return df
 
 
@@ -233,8 +232,8 @@ class CurveFitSettings(object):
     
     @classmethod
     def loadFromFile(cls,filename):
-        cp = ConfigParser.SafeConfigParser()
-        configFile = os.path.abspath(filename)  
+        cp = _ConfigParser.Safe_ConfigParser()
+        configFile = _os.path.abspath(filename)  
         cp.read(configFile)
         
         s = CurveFitSettings()
@@ -251,11 +250,11 @@ class CurveFitSettings(object):
         if prototype and not isinstance(prototype,CurveFitSettings):
             raise TypeError("prototype must be an instance of CurveFitSettings or None")
         
-        if (os.path.isfile(filename)):
+        if (_os.path.isfile(filename)):
             return CurveFitSettings.loadFromFile(filename)
         else:
             if prototype:
-                s = copy.copy(prototype)
+                s = _copy.copy(prototype)
             else:
                 s = CurveFitSettings()
             
@@ -266,10 +265,10 @@ class CurveFitSettings(object):
     def saveToFile(self,filename=None):
         
         if (filename):
-            self.configFile = os.path.abspath(filename)
+            self.configFile = _os.path.abspath(filename)
             
-        cp = ConfigParser.SafeConfigParser()
-        configFile = os.path.abspath(filename)
+        cp = _ConfigParser.Safe_ConfigParser()
+        configFile = _os.path.abspath(filename)
         cp.read(configFile)
         
         if (not cp.has_section('PostProcessing')):
@@ -294,8 +293,8 @@ class OpticsSettings(object):
     @classmethod
     def loadFromFile(cls,filename):
         print filename
-        cp = ConfigParser.SafeConfigParser()
-        configFile = os.path.abspath(filename)  
+        cp = _ConfigParser.Safe_ConfigParser()
+        configFile = _os.path.abspath(filename)  
         print configFile
         cp.read(configFile)
         
@@ -310,7 +309,7 @@ class OpticsSettings(object):
     
     @classmethod
     def loadFromFileOrCreateDefault(cls,filename):
-        if (os.path.isfile(filename)):
+        if (_os.path.isfile(filename)):
             return OpticsSettings.loadFromFile(filename)
         else:
             s = OpticsSettings()
@@ -320,10 +319,10 @@ class OpticsSettings(object):
     def saveToFile(self,filename=None):
         
         if (filename):
-            self.configFile = os.path.abspath(filename)
+            self.configFile = _os.path.abspath(filename)
             
-        cp = ConfigParser.SafeConfigParser()
-        configFile = os.path.abspath(filename)
+        cp = _ConfigParser.Safe_ConfigParser()
+        configFile = _os.path.abspath(filename)
         cp.read(configFile)
         
         if (not cp.has_section('Optics')):
@@ -335,7 +334,7 @@ class OpticsSettings(object):
             cp.write(fp)
     
     
-class ODAFitSettings(object):
+class ODAFitSettings(object):<!-- language: c# -->
     def __init__(self,fitFunction,estimatorValuesDict):
         self.xminBound = int(round(estimatorValuesDict['minBound'][0]))
         self.xmaxBound = int(round(estimatorValuesDict['maxBound'][0]))
@@ -384,10 +383,10 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
     """
     
     if not progressReporter:
-        progressReporter = StdOutProgressReporter()
+        progressReporter = _StdOutProgressReporter()
     
     fitFunction = peakFitSettings.fitFunction
-    df = pd.DataFrame(index=intensityProfiles.index)
+    df = _pd.DataFrame(index=intensityProfiles.index)
     df['displacement'] = 0.0
     df['curveFitResult'] = CurveFitResult()
     df['chiSquare'] = 0.0
@@ -399,13 +398,13 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
         
     xmin = peakFitSettings.xminBound
     xmax = peakFitSettings.xmaxBound
-    xdata = np.arange(len(intensityProfiles.iloc[0]))[xmin:xmax]
+    xdata = _np.arange(len(intensityProfiles.iloc[0]))[xmin:xmax]
     
     progress = 0.0
     total = len(df.index)
     for i in df.index:
          ydata = intensityProfiles.get_value(i)[xmin:xmax]
-         popt,pcov = curve_fit(fitFunction,\
+         popt,pcov = _curve_fit(fitFunction,\
                   xdata = xdata,\
                   ydata = ydata,\
                   p0 = p0,**curveFitKwargs)
@@ -415,7 +414,7 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
 
          curveFitResult.popt = popt
          curveFitResult.pcov = pcov         
-         curveFitResult.chisquare = chisquare(ydata,fitFunction(xdata,*popt))[0]
+         curveFitResult.chisquare = _chisquare(ydata,fitFunction(xdata,*popt))[0]
          
          df.curveFitResult[i] = curveFitResult         
          df.displacement[i] = fitFunction.getDisplacement(*popt)         
