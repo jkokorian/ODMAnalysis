@@ -11,7 +11,6 @@ from watchdog.events import FileSystemEventHandler
 import sys
 import os
 import pandas as pd
-import numpy as np
 from Queue import Queue, Full
 from threading import Thread
 import multiprocessing as mp
@@ -104,7 +103,7 @@ class OMDCsvChunkHandler(FileSystemEventHandler):
         self.processedDataframeQueue = Queue()
         
         self.chunkReader = ChunkReader(inputFile)
-        self.dataProcessor = ChunkedODMDataProcessor(inputFile)
+        self.dataProcessor = ChunkedODMDataProcessor(os.path.abspath(os.path.split(inputFile)[0]))
         self.chunkWriter = ChunkWriter(outputFile)
         
         self.fileConsumerThread = ReturnActionConsumerThread(self.chunkReader.read_next,self.fileQueue,self.rawDataframeQueue)
@@ -135,7 +134,7 @@ class ChunkedODMDataProcessor(object):
     Instances of this class process chunks of raw odm dataframes.
     """
     
-    def __init__(self,inputFile):
+    def __init__(self,commonPath):
         """
         TODO: class should not know anything about 'inputFiles', only about chunks of dataframes        
         
@@ -145,8 +144,7 @@ class ChunkedODMDataProcessor(object):
         inputFile: string
             path to the file that is being processed
         """
-        self.commonPath = os.path.abspath(os.path.split(inputFile)[0])
-        self.measurementName = os.path.split(os.path.split(inputFile)[0])[1]
+        self.commonPath = commonPath
         self.curveFitSettings = None
         self.movingPeakFitSettings = None
         self.referencePeakFitSettings = None
@@ -270,7 +268,7 @@ class ReturnActionConsumerThread(Thread):
 def _getPeakFitSettingsFromUser(q,df,settings):
     """
     Helper method to be able to start the gui from another thread than the main one.
-    Use is by starting a Process (multiprocessing module) that executes this function.
+    Use it by starting a Process (multiprocessing module) that executes this function.
     """
     
     movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
