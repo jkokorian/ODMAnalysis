@@ -5,14 +5,12 @@ Created on Fri Dec 20 11:29:47 2013
 @author: jkokorian
 """
 
-import sys
-import os
-
-import odmanalysis as odm
+import sys as _sys
+import os as _os
+import odmanalysis as _odm
 import odmanalysis.plots as odmp
-import odmanalysis.gui as gui
-
-from matplotlib import pyplot as plt
+import odmanalysis.gui as _gui
+from matplotlib import pyplot as _plt
 
 def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
     """
@@ -117,29 +115,29 @@ def makeIntensityProfilePlots(df,movingPeakFitSettings,referencePeakFitSettings,
 
 def main():
 
-    if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
-        filename = sys.argv[1]
+    if (len(_sys.argv) > 1 and _os.path.exists(_sys.argv[1]) and _os.path.isfile(_sys.argv[1])):
+        filename = _sys.argv[1]
     else:
-        filename = gui.get_path("*.csv",defaultFile="odmanalysis.csv")
+        filename = _gui.get_path("*.csv",defaultFile="odmanalysis.csv")
     
     
-    commonPath = os.path.abspath(os.path.split(filename)[0])
-    measurementName = os.path.split(os.path.split(filename)[0])[1]
+    commonPath = _os.path.abspath(_os.path.split(filename)[0])
+    measurementName = _os.path.split(_os.path.split(filename)[0])[1]
     
     try:
-        settings = odm.CurveFitSettings.loadFromFile(commonPath + '/odmSettings.ini')
+        settings = _odm.CurveFitSettings.loadFromFile(commonPath + '/odmSettings.ini')
         print "settings loaded from local odmSettings.ini"
     except:
-        settings = gui.getSettingsFromUser(None)
+        settings = _gui.getSettingsFromUser(None)
         settings.saveToFile(commonPath + '/odmSettings.ini')
         print "settings saved to local odmSettings.ini"
     
-    df = odm.readAnalysisData(filename)
+    df = _odm.readAnalysisData(filename)
     
     makeDisplacementPlots(df,commonPath, measurementName = measurementName, nmPerPx = settings.pxToNm)
     
     
-    plt.show()
+    _plt.show()
 
 if __name__ == "__main__":
     main()

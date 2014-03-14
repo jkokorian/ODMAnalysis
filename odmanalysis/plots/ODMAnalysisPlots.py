@@ -6,12 +6,12 @@ Created on Tue Dec 17 09:57:12 2013
 """
 
 from __future__ import division as _division
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mpld
-from matplotlib import animation
-from odmanalysis import stats as ODMStats
-from odmanalysis.ProgressReporting import StdOutProgressReporter
+import numpy as _np
+import matplotlib.pyplot as _plt
+import matplotlib.dates as _mpld
+from matplotlib import animation as _animation
+from odmanalysis import stats as _ODMStats
+from odmanalysis.ProgressReporting import StdOutProgressReporter as _StdOutProgressReporter
 
 
 
@@ -27,9 +27,9 @@ def hasConstantVoltage(odmAnalysisDataFrame):
     
 def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = None, nmPerPx=1):
     if not figure:    
-        figure = plt.figure('Chi-Squared (%s)' % measurementName)
+        figure = _plt.figure('Chi-Squared (%s)' % measurementName)
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     
     axes.plot(df.actuatorVoltage,df.chiSquare_mp,label='moving peak')
     if (hasReference(df)):
@@ -49,9 +49,9 @@ def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = N
 def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
     #show voltage-displacement curve
     if not figure:    
-        figure = plt.figure('Voltage Displacement %s (%s)' % ("(corrected)" if corrected else "", measurementName))
+        figure = _plt.figure('Voltage Displacement %s (%s)' % ("(corrected)" if corrected else "", measurementName))
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     
     fwd=df[df.direction=='forward']
     bwd=df[df.direction=='backward']
@@ -75,9 +75,9 @@ def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=
 
 def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:    
-        figure = plt.figure('Multiple cycles %s (%s)' % ("(corrected)" if corrected else "", measurementName))
+        figure = _plt.figure('Multiple cycles %s (%s)' % ("(corrected)" if corrected else "", measurementName))
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     axes.set_ylabel("Displacement (px)")
     axes.set_xlabel("Actuator Voltage (V)")
     
@@ -103,18 +103,18 @@ def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=F
 def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None):
     
     if not progressReporter:
-        progressReporter = StdOutProgressReporter()
+        progressReporter = _StdOutProgressReporter()
     
     numberOfCycles = int(df.cycleNumber.max())    
 
     #create dummy axis and plot to determine xlim and ylim
     df1 = df[df.cycleNumber == numberOfCycles//2]
-    plt.figure()
-    axDummy = plt.axes()
+    _plt.figure()
+    axDummy = _plt.axes()
     axDummy.plot(df1.actuatorVoltage,df1.displacement)
     
-    fig = plt.figure('test')
-    ax = plt.axes(xlim=axDummy.get_xlim(), ylim=axDummy.get_ylim())
+    fig = _plt.figure('test')
+    ax = _plt.axes(xlim=axDummy.get_xlim(), ylim=axDummy.get_ylim())
     fwdline, = ax.plot([], [], 'b')
     bwdline, = ax.plot([], [], 'g')
     text = ax.set_title("")
@@ -140,7 +140,7 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     
     # call the animator.  blit=True means only re-draw the parts that have changed.
     
-    anim = animation.FuncAnimation(fig, render_frame, init_func=init_frame,
+    anim = _animation.FuncAnimation(fig, render_frame, init_func=init_frame,
                                    frames=numberOfCycles, interval=20, blit=True)
     
     # save the animation as an mp4.  This requires ffmpeg or mencoder to be
@@ -156,14 +156,14 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
 
 def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues=False, filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
-        figure = plt.figure('Multiple cycle average %s (%s)' % ("(corrected)" if corrected else "", measurementName))
+        figure = _plt.figure('Multiple cycle average %s (%s)' % ("(corrected)" if corrected else "", measurementName))
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     axes.set_ylabel("Displacement (px)")
     axes.set_xlabel("Actuator Voltage (V)")
     
     grouped = df.groupby(['direction','actuatorVoltage'])['displacement']
-    dfMean = grouped.agg({'displacement': np.mean})
+    dfMean = grouped.agg({'displacement': _np.mean})
     dfMean.displacement['forward'].plot(ax=axes,label="forward")
     dfMean.displacement['backward'].plot(ax=axes,label="backward")
     
@@ -180,22 +180,22 @@ def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues
 
 def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10,filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
-        figure = plt.figure('Intensity Profiles (%s)' % measurementName)
+        figure = _plt.figure('Intensity Profiles (%s)' % measurementName)
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     axes.set_xlabel('x (px)')
     axes.set_ylabel('Intensity (arb. units)')
     
     for i in range(0,len(dfRaw.intensityProfile),len(dfRaw.intensityProfile)//numberOfProfiles):
         
-        xValues_mp = np.arange(movingPeakFitSettings.xminBound,movingPeakFitSettings.xmaxBound)
+        xValues_mp = _np.arange(movingPeakFitSettings.xminBound,movingPeakFitSettings.xmaxBound)
         
-        plt.plot(dfRaw.intensityProfile.iloc[i],'b')
-        plt.plot(xValues_mp,movingPeakFitSettings.fitFunction(xValues_mp,*dfRaw.curveFitResult_mp.iloc[i].popt),'r--')
+        _plt.plot(dfRaw.intensityProfile.iloc[i],'b')
+        _plt.plot(xValues_mp,movingPeakFitSettings.fitFunction(xValues_mp,*dfRaw.curveFitResult_mp.iloc[i].popt),'r--')
         
         if referencePeakFitSettings:
-            xValues_ref = np.arange(referencePeakFitSettings.xminBound,referencePeakFitSettings.xmaxBound)                
-            plt.plot(xValues_ref,referencePeakFitSettings.fitFunction(xValues_ref,*dfRaw.curveFitResult_ref.iloc[i].popt),'g--')
+            xValues_ref = _np.arange(referencePeakFitSettings.xminBound,referencePeakFitSettings.xmaxBound)                
+            _plt.plot(xValues_ref,referencePeakFitSettings.fitFunction(xValues_ref,*dfRaw.curveFitResult_ref.iloc[i].popt),'g--')
     
     ty = axes.twiny()
     ty.set_xlabel('x ($\mu$m)')
@@ -211,9 +211,9 @@ def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=Non
     titlesDict = {'diff': 'differential','mp': 'moving peak', 'ref': 'reference peak'}
     
     if not figure:    
-        figure = plt.figure('Position histogram: %s (%s)' % (titlesDict[source], measurementName))
+        figure = _plt.figure('Position histogram: %s (%s)' % (titlesDict[source], measurementName))
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     histogramKwargs = {'facecolor':'green', 'alpha':0.5,'normed': True}
     
     if (source == 'diff'):
@@ -226,16 +226,16 @@ def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=Non
         displacementValues = df.displacement_ref
     
     if not nbins:
-        nbins = int(round(np.sqrt(len(displacementValues))))
+        nbins = int(round(_np.sqrt(len(displacementValues))))
     
-    plt.hist(displacementValues,bins=nbins,**histogramKwargs)
+    _plt.hist(displacementValues,bins=nbins,**histogramKwargs)
     
-    sd = ODMStats.makeStatsDescriptionDict(displacementValues * nmPerPx)
+    sd = _ODMStats.makeStatsDescriptionDict(displacementValues * nmPerPx)
     peakDistanceToEdge = [abs(sd['mean']-x*nmPerPx) for x in axes.get_xlim()]
     xtext = 0.1 if peakDistanceToEdge[0] > peakDistanceToEdge[1] else 0.7
         
-    plt.text(xtext,0.7,ODMStats.printStatsDescriptionDict(sd),transform=axes.transAxes)
-    plt.xlabel('position (px)')
+    _plt.text(xtext,0.7,_ODMStats.printStatsDescriptionDict(sd),transform=axes.transAxes)
+    _plt.xlabel('position (px)')
     ty = axes.twiny()
     ty.set_xlabel('position (nm)')
     ty.set_xlim(nmPerPx * px for px in axes.get_xlim())
@@ -252,12 +252,12 @@ def plotDisplacementVersusTimestamp(df,sources='diff',filename=None, measurement
     titlesDict = {'diff': 'differential','mp': 'moving peak', 'ref': 'reference peak'}
     title = ', '.join(titlesDict[s] for s in sources)
     if not figure:    
-        figure = plt.figure('Position-Time %s (%s)' % (title,measurementName))
+        figure = _plt.figure('Position-Time %s (%s)' % (title,measurementName))
     if not axes:
-        axes = plt.subplot(111)
+        axes = _plt.subplot(111)
     
     
-    times = mpld.date2num(df.index)
+    times = _mpld.date2num(df.index)
     times = times-times[0]
     alpha = 1 if len(sources) == 1 else 0.5
     for source in sources:
