@@ -5,11 +5,13 @@ Created on Tue Dec 17 09:57:12 2013
 @author: jkokorian
 """
 
+from __future__ import division as _division
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpld
 from matplotlib import animation
 from odmanalysis import stats as ODMStats
+from odmanalysis.ProgressReporting import StdOutProgressReporter
 
 
 
@@ -98,10 +100,16 @@ def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=F
         
     return figure, axes
 
-def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200):
+def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None):
     
+    if not progressReporter:
+        progressReporter = StdOutProgressReporter()
+    
+    numberOfCycles = int(df.cycleNumber.max())    
+
     #create dummy axis and plot to determine xlim and ylim
-    df1 = df[df.cycleNumber ==1]
+    df1 = df[df.cycleNumber == numberOfCycles//2]
+    plt.figure()
     axDummy = plt.axes()
     axDummy.plot(df1.actuatorVoltage,df1.displacement)
     
@@ -112,14 +120,16 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     text = ax.set_title("")
     
     # initialization function: plot the background of each frame
-    def init():
+    def init_frame():
         fwdline.set_data([], [])
         bwdline.set_data([], [])
         text.set_text("")
         return fwdline,bwdline,text
     
+    
     # animation function.  This is called sequentially
-    def animate(i_frame):
+    def render_frame(i_frame):
+        progressReporter.progress((i_frame+1)/numberOfCycles * 100)
         dfc = df[df.cycleNumber == i_frame+1]
         fwd = dfc[dfc.direction == "forward"]
         bwd = dfc[dfc.direction == "backward"]
@@ -129,18 +139,20 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
         return fwdline,bwdline,text,
     
     # call the animator.  blit=True means only re-draw the parts that have changed.
-    numberOfFrames = int(df.cycleNumber.max())
-    anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=numberOfFrames, interval=20, blit=True)
+    
+    anim = animation.FuncAnimation(fig, render_frame, init_func=init_frame,
+                                   frames=numberOfCycles, interval=20, blit=True)
     
     # save the animation as an mp4.  This requires ffmpeg or mencoder to be
     # installed.  The extra_args ensure that the x264 codec is used, so that
     # the video can be embedded in html5.  You may need to adjust this for
     # your system: for more information, see
     # http://matplotlib.sourceforge.net/api/animation_api.html
+    #progressReporter.message("Creating movie...")
     anim.save(filename, fps=10, extra_args=['-vcodec', 'libx264'],dpi=dpi)
     
-    return figure, ax, anim
+    
+    return anim
 
 def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues=False, filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
