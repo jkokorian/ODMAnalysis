@@ -15,8 +15,6 @@ import ConfigParser as _ConfigParser
 from ProgressReporting import StdOutProgressReporter as _StdOutProgressReporter
 import pickle as _pickle
 import copy as _copy
-import re as _re
-
 
 
 def ipStringToArray(ipString):    
@@ -228,7 +226,7 @@ class CurveFitSettings(object):
     
     @classmethod
     def loadFromFile(cls,filename):
-        cp = _ConfigParser.Safe_ConfigParser()
+        cp = _ConfigParser.SafeConfigParser()
         configFile = _os.path.abspath(filename)  
         cp.read(configFile)
         
@@ -263,7 +261,7 @@ class CurveFitSettings(object):
         if (filename):
             self.configFile = _os.path.abspath(filename)
             
-        cp = _ConfigParser.Safe_ConfigParser()
+        cp = _ConfigParser.SafeConfigParser()
         configFile = _os.path.abspath(filename)
         cp.read(configFile)
         
@@ -289,7 +287,7 @@ class OpticsSettings(object):
     @classmethod
     def loadFromFile(cls,filename):
         print filename
-        cp = _ConfigParser.Safe_ConfigParser()
+        cp = _ConfigParser.SafeConfigParser()
         configFile = _os.path.abspath(filename)  
         print configFile
         cp.read(configFile)
@@ -317,7 +315,7 @@ class OpticsSettings(object):
         if (filename):
             self.configFile = _os.path.abspath(filename)
             
-        cp = _ConfigParser.Safe_ConfigParser()
+        cp = _ConfigParser.SafeConfigParser()
         configFile = _os.path.abspath(filename)
         cp.read(configFile)
         
