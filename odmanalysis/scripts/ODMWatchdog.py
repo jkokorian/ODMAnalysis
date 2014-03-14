@@ -77,6 +77,25 @@ class ChunkWriter(object):
 
 
 class OMDCsvChunkHandler(FileSystemEventHandler):
+    """
+    Handler for watchdog filesystem events.
+    
+    Description
+    -----------
+    
+    This class hosts three consumer/producer threads for the following functions
+    
+        - producer: reading chunks of data from the input file.
+        - consumer-producer: processing chunks of data
+        - consumer: writing chunks of data to the output file
+        
+    When a change is detected on the target input file a flag is raised to the
+    'reader' thread to read a chunk of data. This chunk is then passed on to the
+    dataProcessing consumer thread where the displacement is detected and stored to an
+    output dataframe. This dataframe is passed to the outputwriter consumer thread that
+    writes it to the output csv file.
+    """    
+    
     def __init__(self,inputFile,outputFile):
         self.inputFile = inputFile
         
@@ -112,7 +131,20 @@ class OMDCsvChunkHandler(FileSystemEventHandler):
 
 
 class ChunkedODMDataProcessor(object):
+    """
+    Instances of this class process chunks of raw odm dataframes.
+    """
+    
     def __init__(self,inputFile):
+        """
+        TODO: class should not know anything about 'inputFiles', only about chunks of dataframes        
+        
+        Parameters
+        ----------
+        
+        inputFile: string
+            path to the file that is being processed
+        """
         self.commonPath = os.path.abspath(os.path.split(inputFile)[0])
         self.measurementName = os.path.split(os.path.split(inputFile)[0])[1]
         self.curveFitSettings = None
@@ -123,6 +155,21 @@ class ChunkedODMDataProcessor(object):
         
     
     def processDataFrame(self,df):
+        """
+        Processes a dataframe of raw odm data and analyzes the displacement. If this is the first dataframe
+        that is being processed, the gui will show to ask the user for fit-function details.
+        
+        For subsequent calls to this method, the last fit-result of the previous dataframe
+        is used as the initial parameters for the fit in the current dataframe.
+        
+        Parameters
+        ----------
+        
+        df: pandas.DataFrame
+            ODM dataframe that contains the raw ODM data
+        
+        
+        """
         if df is None:
             return None
         
@@ -136,8 +183,8 @@ class ChunkedODMDataProcessor(object):
             settings.saveToFile()
         
         if not self.movingPeakFitSettings:
-            q = mp.Queue()
-            p = mp.Process(target=getPeakFitSettingsFromUser, args=(q,df,settings))
+            q = mp.Queue() #it is nescessary to host all gui elements in their own process, because the cannot be spawned from another thread than the main one.
+            p = mp.Process(target=_getPeakFitSettingsFromUser, args=(q,df,settings))
             p.start()
             settingsDict = q.get()
             p.join()
@@ -166,6 +213,7 @@ class ChunkedODMDataProcessor(object):
 class StartActionConsumerThread(Thread):
     """
     Monitors an inputqueue for callable items. Each dequeued item is executed.
+    No return values are captured.
     """
 
     def __init__(self,queue):
@@ -219,25 +267,31 @@ class ReturnActionConsumerThread(Thread):
                 self.outputQueue.put(value)
             
 
-def getPeakFitSettingsFromUser(q,df,settings):
-        movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[0],movingPeakFitFunction,
-                                                           estimatorPromptPrefix="Moving peak:",
-                                                           windowTitle="Moving Peak estimates")
+def _getPeakFitSettingsFromUser(q,df,settings):
+    """
+    Helper method to be able to start the gui from another thread than the main one.
+    Use is by starting a Process (multiprocessing module) that executes this function.
+    """
+    
+    movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+    movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[0],movingPeakFitFunction,
+                                                       estimatorPromptPrefix="Moving peak:",
+                                                       windowTitle="Moving Peak estimates")
+    
+    try:
+        referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+        referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
+                                                                  estimatorPromptPrefix="Reference peak:",
+                                                                  windowTitle="Reference Peak estimates")
         
-        try:
-            referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
-                                                                      estimatorPromptPrefix="Reference peak:",
-                                                                      windowTitle="Reference Peak estimates")
-            
-            
-        except: #exception occurs if user cancels the 'dialog'
-            referencePeakFitFunction = None        
-            referencePeakFitSettings = None
-            
-        q.put({'movingPeakFitSettings': movingPeakFitSettings,
-               'referencePeakFitSettings': referencePeakFitSettings})
+        
+    except: #exception occurs if user cancels the 'dialog'
+        referencePeakFitFunction = None        
+        referencePeakFitSettings = None
+        
+    q.put({'movingPeakFitSettings': movingPeakFitSettings,
+           'referencePeakFitSettings': referencePeakFitSettings})
+
 
 def main():
     if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
