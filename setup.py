@@ -13,6 +13,7 @@ setup(name='odmanalysis',
           'odmanalysis.plots',
           'odmanalysis.fitfunctions',
           'odmanalysis.stats',
+          'odmanalysis.chunkhandling',
           'odmanalysis.scripts'
           ],
       install_requires=[

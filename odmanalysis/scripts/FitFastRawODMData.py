@@ -3,7 +3,7 @@ import os
 import sys
 import odmanalysis as odm
 from odmanalysis import gui
-from ODMWatchdog import ChunkedODMDataProcessor,ChunkWriter
+from odmanalysis.chunkhandling import ChunkedODMDataProcessor,ChunkWriter
 from multiprocessing import Process, Queue
 
 
