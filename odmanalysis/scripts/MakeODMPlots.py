@@ -86,7 +86,7 @@ def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
             
             
     print "ALL DONE"
-    
+
 def makeIntensityProfilePlots(df,movingPeakFitSettings,referencePeakFitSettings,savePath, measurementName = "", nmPerPx = 1):
     """
     Creates plots of the intensity profiles with the fitted curves on top.

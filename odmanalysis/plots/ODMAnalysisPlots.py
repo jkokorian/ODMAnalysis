@@ -11,7 +11,7 @@ import matplotlib.pyplot as _plt
 import matplotlib.dates as _mpld
 from matplotlib import animation as _animation
 from odmanalysis import stats as _ODMStats
-from odmanalysis.ProgressReporting import StdOutProgressReporter as _StdOutProgressReporter
+from odmanalysis.ProgressReporting import BasicProgressReporter as _BasicProgressReporter
 
 
 
@@ -24,7 +24,7 @@ def hasReference(odmAnalysisDataFrame):
 def hasConstantVoltage(odmAnalysisDataFrame):
     return len(odmAnalysisDataFrame.actuatorVoltage.unique()) == 1
 
-    
+@_BasicProgressReporter(entryMessage="creating chi-square plots...")
 def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = None, nmPerPx=1):
     if not figure:    
         figure = _plt.figure('Chi-Squared (%s)' % measurementName)
@@ -45,7 +45,7 @@ def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = N
     return figure,axes
 
 
-
+@_BasicProgressReporter(entryMessage="creating voltage-displacement graphs for single cycle...")
 def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
     #show voltage-displacement curve
     if not figure:    
@@ -72,7 +72,7 @@ def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=
     return figure,axes
 
 
-
+@_BasicProgressReporter(entryMessage="Creating voltage-displacment graphs for multiple cycles...")
 def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:    
         figure = _plt.figure('Multiple cycles %s (%s)' % ("(corrected)" if corrected else "", measurementName))
@@ -100,10 +100,9 @@ def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=F
         
     return figure, axes
 
+@_BasicProgressReporter(entryMessage="Creating multiple cycle voltage-displacement animation...")
 def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None):
-    
-    if not progressReporter:
-        progressReporter = _StdOutProgressReporter()
+       
     
     numberOfCycles = int(df.cycleNumber.max())    
 
@@ -129,7 +128,8 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     
     # animation function.  This is called sequentially
     def render_frame(i_frame):
-        progressReporter.progress((i_frame+1)/numberOfCycles * 100)
+        if (progressReporter):        
+            progressReporter.progress((i_frame+1)/numberOfCycles * 100)
         dfc = df[df.cycleNumber == i_frame+1]
         fwd = dfc[dfc.direction == "forward"]
         bwd = dfc[dfc.direction == "backward"]
@@ -154,6 +154,7 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     
     return anim
 
+@_BasicProgressReporter(entryMessage="Creating multiple cycle average graph...")
 def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues=False, filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
         figure = _plt.figure('Multiple cycle average %s (%s)' % ("(corrected)" if corrected else "", measurementName))
@@ -178,6 +179,7 @@ def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues
         
     return figure,axes
 
+@_BasicProgressReporter(entryMessage="Creating intensity profile plots...")
 def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10,filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
         figure = _plt.figure('Intensity Profiles (%s)' % measurementName)
@@ -206,7 +208,7 @@ def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,n
     
     return figure,axes
     
-
+@_BasicProgressReporter(entryMessage="Creating histogram for constant displacement...")
 def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
     titlesDict = {'diff': 'differential','mp': 'moving peak', 'ref': 'reference peak'}
     
@@ -246,6 +248,7 @@ def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=Non
         
     return figure,axes
 
+@_BasicProgressReporter(entryMessage="Creating timestamp-displacement plot...")
 def plotDisplacementVersusTimestamp(df,sources='diff',filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):        
     sources = sources.split(',')
     
