@@ -30,7 +30,7 @@ def main():
     
     
     readerProcess, readerQueue = startReadAsync(filename)
-    dataProcessor = ChunkedODMDataProcessor(filename)
+    dataProcessor = ChunkedODMDataProcessor(commonPath)
     chunkWriter = ChunkWriter(commonPath + "/odmanalysis.csv")
     
     while True:
