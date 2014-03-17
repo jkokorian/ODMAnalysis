@@ -94,8 +94,8 @@ class BasicProgressReporter(object):
     Decorate any function as follows to use the standard entry and exit messages:
     
     >>> @BasicProgressReporter()
-    >>> def f():
-    >>>    pass
+    ... def f():
+    ...    pass
     >>> f()
     Executing f...
     Done
@@ -103,8 +103,8 @@ class BasicProgressReporter(object):
     Use the optional arguments to specify the enty and exit messages:
       
     >>> @BasicProgressReporter(entryMessage="entering...",exitMessage="exited")
-    >>> def f():
-    >>>    pass
+    ... def f():
+    ...    pass
     >>> f()
     entering...
     exited
