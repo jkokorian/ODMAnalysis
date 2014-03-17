@@ -12,9 +12,15 @@ import multiprocessing as _mp
 import odmanalysis as _odm
 import odmanalysis.gui as _gui
 import odmanalysis.fitfunctions as _ff
+from odmanalysis.ProgressReporting import ProgressReporter as _ProgressReporter
+from odmanalysis.ProgressReporting import BasicProgressReporter as _BasicProgressReporter
 
 
 class ChunkReader(object):
+    """
+    Reads the target raw ODM data file into a dataframe. For subsequent calls of
+    'read', the file is reopened every time and reading continues where the last read ended.
+    """
     def __init__(self,path):
         self.nlinesRead = 0
         self.path = path
@@ -36,14 +42,13 @@ class ChunkReader(object):
     
 
 class ChunkWriter(object):
+    
     def __init__(self,outputFile):
         self.outputFile = outputFile
         self.outStream = None
-        self.lastDataFrame = None
     
+    @_BasicProgressReporter(entryMessage="Writing...",exitMessage="Done")
     def writeDataFrame(self,df):
-        print "writing"
-        
         header = False
         if self.outStream is None:
             if _os.path.exists(self.outputFile):
@@ -51,26 +56,11 @@ class ChunkWriter(object):
             self.outStream = file(self.outputFile,'a')
             header = True
         
-        if (self.lastDataFrame is not None):
-            tail = self.lastDataFrame.iloc[-2:]
-            dfC = _pd.concat([tail,df])
-            _odm.getActuationDirectionAndCycle(dfC,startDirection = tail.direction.iloc[1],startCycleNumber = tail.cycleNumber.iloc[1])
-            df = dfC.iloc[2:]
-        else:
-            _odm.getActuationDirectionAndCycle(df)
-            
-        
         exportColumns = ['relativeTime','cycleNumber','direction','actuatorVoltage','displacement','displacement_mp','chiSquare_mp']
         if ('displacement_ref' in df.columns):
             exportColumns +=['displacement_ref','chiSquare_ref']
         df[exportColumns].to_csv(self.outStream,index_label='timestamp',header=header)
         
-        self.lastDataFrame = df
-        print "done"
-
-
-
-
 class ChunkedODMDataProcessor(object):
     """
     Instances of this class process chunks of raw odm dataframes.
@@ -90,6 +80,7 @@ class ChunkedODMDataProcessor(object):
         self.referencePeakFitSettings = None
         self.popt_mp_previous = None
         self.popt_ref_previous = None
+        self.lastDataFrame = None
         
     
     def processDataFrame(self,df):
@@ -143,6 +134,16 @@ class ChunkedODMDataProcessor(object):
             df['displacement'] = df.displacement_mp - df.displacement_ref
         else:
             df['displacement'] = df.displacement_mp
+        
+        if (self.lastDataFrame is not None):
+            tail = self.lastDataFrame.iloc[-2:]
+            dfC = _pd.concat([tail,df])
+            _odm.getActuationDirectionAndCycle(dfC,startDirection = tail.direction.iloc[1],startCycleNumber = tail.cycleNumber.iloc[1])
+            df = dfC.iloc[2:]
+        else:
+            _odm.getActuationDirectionAndCycle(df)
+        
+        self.lastDataFrame = df
         
         return df
             

@@ -15,14 +15,14 @@ class ProgressReporter(object):
     def __init__(self):
         pass
     
-    def progress(self,progress):
-        raise NotImplementedError("Should be implemented by children")
+    def progress(self,progress, message=""):
+        pass
     
     def message(self,message):
-        raise NotImplementedError("Should be implemented by children")
+        pass
         
     def done(self):
-        raise NotImplementedError("Should be implemented by children")
+        pass
         
 
 class StreamReporter(object):
@@ -88,7 +88,7 @@ class BasicProgressReporter(object):
     upon decoration and passed to the function when it is called.
     """
     
-    def __init__(self, entryMessage = None, exitMessage = None):
+    def __init__(self, entryMessage = None, exitMessage = "Done"):
         """
         Parameters
         ----------
@@ -106,8 +106,6 @@ class BasicProgressReporter(object):
     def __call__(self,f):
         if self.entryMessage is None:
             self.entryMessage = "executing %s..." % f.func_name
-        if self.exitMessage is None:
-            self.exitMessage = "done"
         
         def wrapped_f(*args,**kwargs):
             if (kwargs.has_key('progressReporter') and kwargs['progressReporter'] is not None):
