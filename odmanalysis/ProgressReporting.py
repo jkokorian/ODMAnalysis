@@ -86,6 +86,22 @@ class BasicProgressReporter(object):
     
     If the ProgressReporter argument is None, a StdOutputProgressReporter will be created
     upon decoration and passed to the function when it is called.
+
+    
+    Example
+    -----
+
+    Decorate any function as follows to use the standard entry and exit messages:
+    
+    >>> @BasicProgressReporter()
+    >>> def f(...):
+    >>>    ...
+        
+    Use the optional arguments to specify the enty and exit messages:
+      
+    >>> @BasicProgressReporter(entryMessage="entering...",exitMessage="exited")
+    >>> def f(...):
+    >>>    ...    
     """
     
     def __init__(self, entryMessage = None, exitMessage = "Done"):

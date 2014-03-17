@@ -12,7 +12,6 @@ import multiprocessing as _mp
 import odmanalysis as _odm
 import odmanalysis.gui as _gui
 import odmanalysis.fitfunctions as _ff
-from odmanalysis.ProgressReporting import ProgressReporter as _ProgressReporter
 from odmanalysis.ProgressReporting import BasicProgressReporter as _BasicProgressReporter
 
 
