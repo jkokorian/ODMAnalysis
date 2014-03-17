@@ -94,14 +94,20 @@ class BasicProgressReporter(object):
     Decorate any function as follows to use the standard entry and exit messages:
     
     >>> @BasicProgressReporter()
-    >>> def f(...):
-    >>>    ...
+    >>> def f():
+    >>>    pass
+    >>> f()
+    Executing f...
+    Done
         
     Use the optional arguments to specify the enty and exit messages:
       
     >>> @BasicProgressReporter(entryMessage="entering...",exitMessage="exited")
-    >>> def f(...):
-    >>>    ...    
+    >>> def f():
+    >>>    pass
+    >>> f()
+    entering...
+    exited
     """
     
     def __init__(self, entryMessage = None, exitMessage = "Done"):
@@ -121,7 +127,7 @@ class BasicProgressReporter(object):
         
     def __call__(self,f):
         if self.entryMessage is None:
-            self.entryMessage = "executing %s..." % f.func_name
+            self.entryMessage = "Executing %s..." % f.func_name
         
         def wrapped_f(*args,**kwargs):
             if (kwargs.has_key('progressReporter') and kwargs['progressReporter'] is not None):

@@ -14,7 +14,6 @@ import odmanalysis.gui as _gui
 import odmanalysis.fitfunctions as _ff
 from odmanalysis.ProgressReporting import BasicProgressReporter as _BasicProgressReporter
 
-
 class ChunkReader(object):
     """
     Reads the target raw ODM data file into a dataframe. For subsequent calls of
