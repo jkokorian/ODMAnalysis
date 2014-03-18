@@ -32,38 +32,46 @@ class ODMPlot(object):
     
     @classmethod
     def getSuitablePlotFunctions(cls,df):
-        return [odmPlot.plotFunction for odmPlot in cls.__odmPlots if odmPlot.isSuitableFor(df)]
+        return [odmPlot.plotFunction for odmPlot in cls.getSuitablePlotDefinitions(df)]
+    
+    @classmethod
+    def getSuitablePlotDefinitions(cls,df):
+        return [odmPlot for odmPlot in cls.__odmPlots if odmPlot.isSuitableFor(df)]
     
         
-    def __init__(self,filename,singleCycle=True,multipleCycle=True,maxNumberOfCycles=200,constantVoltage=False,requiresReference=False,suitability_check_functions = []):
+    def __init__(self,filename,requiresSingleCycle=False,requiresMultipleCycle=False,maxNumberOfCycles=200,requiresConstantVoltage=False,requiresVariableVoltage=False,requiresReference=False,suitability_check_functions = []):
         """
         Parameters
         ----------
         
-        singleCycle: boolean, default True
-            The plot should be created for dataframes containing only a single cycle.
+        requiresSingleCycle: boolean, default False
+            The plot should be created exclusively for dataframes containing only a single cycle.
         
-        multipleCycle: boolean, default True
-            The plot should be created for dataframes containing multiple cycles.
+        requiresMultipleCycle: boolean, default True
+            The plot should be created exclusively for dataframes containing multiple cycles.
             
         maxNumberOfCycles: integer, default 200
             If 'multipleCycle'==True, this number indicates the maximum number of cycles
             the plot will still be created.
         
-        constantActuatorVoltage: boolean, default False
-            The plot should be created for dataframes where the actuator voltage is constant.
+        requiresConstantVoltage: boolean, default False
+            The plot should be created exclusively for dataframes where the actuator voltage is constant.
+        
+        requiresVariableVoltage: boolean, default False
+            The plot should not be created for dataframes that have a constant voltage
         
         requiresReference: boolean, default False
-            The plot is only created for dataframes that have a reference
+            The plot should be created exclusivelyfor dataframes that have a reference
             
         suitability_check_functions: list or tuple of functions, default []
             Custom function with a single parameter accepting a dataframe to check
             whether the plot should be created.
         """
         self.filename = filename
-        self.singleCycle = singleCycle
-        self.multipleCycle = multipleCycle
-        self.constantVoltage = constantVoltage
+        self.requiresSingleCycle = requiresSingleCycle
+        self.requiresMultipleCycle = requiresMultipleCycle
+        self.requiresConstantVoltage = requiresConstantVoltage
+        self.requiresVariableVoltage = requiresVariableVoltage
         self.maxNumberOfCycles = maxNumberOfCycles
         self.requiresReference = requiresReference
         self.suitability_check_functions = suitability_check_functions
@@ -73,24 +81,26 @@ class ODMPlot(object):
         self.plotFunction = f
         ODMPlot.__addPlot(self)
         def wrapped_f(*args,**kwargs):
-            f(*args,**kwargs)
+            return f(*args,**kwargs)
         
         wrapped_f.func_name = f.func_name
         return wrapped_f
         
     def isSuitableFor(self,df):
-        result = True        
-        if (hasConstantVoltage(df) and not self.constantVoltage):
+        result = True
+        if (self.requiresConstantVoltage and not hasConstantVoltage(df)):
             result = False
-        elif (hasSingleCycle(df) and not self.singleCycle):
+        if (self.requiresVariableVoltage and hasConstantVoltage(df)):
             result = False
-        elif (hasMultipleCycles(df) and not self.multipleCycle):
+        if (self.requiresSingleCycle and not hasSingleCycle(df)):
             result = False
-        elif (df.cycleNumber.max() > self.maxNumberOfCycles):
+        if (self.requiresMultipleCycle and not hasMultipleCycles(df)):
             result = False
-        elif (not hasReference(df) and self.requiresReference):
+        if (df.cycleNumber.max() > self.maxNumberOfCycles):
             result = False
-        elif (not all([check(df) for check in self.suitability_check_functions])):
+        if (self.requiresReference and not hasReference(df)):
+            result = False
+        if (not all([check(df) for check in self.suitability_check_functions])):
             result = False
         
         return result
@@ -113,7 +123,7 @@ def hasReference(odmAnalysisDataFrame):
 def hasConstantVoltage(odmAnalysisDataFrame):
     return len(odmAnalysisDataFrame.actuatorVoltage.unique()) == 1
 
-@ODMPlot("chi-square.png", maxNumberOfCycles=100)
+@ODMPlot("chi-square.png", requiresVariableVoltage=True)
 @_BasicProgressReporter(entryMessage="creating chi-square plots...")
 def plotChiSquare(df, savePath=None, measurementName="", figure = None, axes = None, nmPerPx=1, **kwargs):
     if not figure:    
@@ -135,7 +145,7 @@ def plotChiSquare(df, savePath=None, measurementName="", figure = None, axes = N
     return figure,axes, save
 
 
-@ODMPlot("Voltage-Displacement.png",multipleCycle=False)
+@ODMPlot("Voltage-Displacement.png",requiresSingleCycle=True, requiresVariableVoltage=True)
 @_BasicProgressReporter(entryMessage="creating voltage-displacement graphs for single cycle...")
 def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
     #show voltage-displacement curve
@@ -162,18 +172,27 @@ def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=
     
     return figure,axes, save
 
-@ODMPlot("Voltage-Displacement (first cycle).png", singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
+@ODMPlot("Voltage-Displacement (first cycle).png", 
+         requiresMultipleCycle=True,
+         maxNumberOfCycles=_np.infty,
+         requiresVariableVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
 def plotFirstCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
     return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==1],measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes, **kwargs)
 
-@ODMPlot("Voltage-Displacement (last cycle).png",singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
+@ODMPlot("Voltage-Displacement (last cycle).png",
+         requiresMultipleCycle=True,
+         requiresVariableVoltage=True,
+         maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
 def plotLastCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
     return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==df.cycleNumber.max()],measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes, **kwargs)
 
 
-@ODMPlot("Voltage-Displacement (all cycles).png",singleCycle=False,maxNumberOfCycles=200)
+@ODMPlot("Voltage-Displacement (all cycles).png",
+         maxNumberOfCycles=200,
+         requiresMultipleCycle=True,
+         requiresVariableVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacment graphs for multiple cycles...")
 def plotMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     if not figure:    
@@ -202,7 +221,10 @@ def plotMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=
     
     return figure,axes, save
 
-@ODMPlot("Voltage-Displacement.mp4",singleCycle=False,maxNumberOfCycles=_np.infty)
+@ODMPlot("Voltage-Displacement.mp4",
+         requiresMultipleCycle=True,
+         requiresVariableVoltage=True,
+         maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle voltage-displacement animation...")
 def animateMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None, **kwargs):
     
@@ -258,7 +280,9 @@ def animateMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figu
     
     return anim, save
 
-@ODMPlot("Voltage-Displacement (mean).png",singleCycle=False)
+@ODMPlot("Voltage-Displacement (mean).png",
+         requiresMultipleCycle=True,
+         requiresVariableVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle average graph...")
 def plotMultiCycleMeanVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     if not figure:
@@ -314,25 +338,19 @@ def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,n
     return figure,axes, save
 
 @ODMPlot("Position Histogram differential.png",
-         singleCycle=False,
-         multipleCycle=False,
-         constantVoltage=True,
+         requiresConstantVoltage=True,
          requiresReference=True)
 def plotConstantDisplacementHistogramDiff(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     return plotConstantDisplacementHistogram(df,source='diff', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
     
     
 @ODMPlot("Position Histogram moving peak.png",
-         singleCycle=False,
-         multipleCycle=False,
-         constantVoltage=True)
+         requiresConstantVoltage=True)
 def plotConstantDisplacementHistogramMoving(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     return plotConstantDisplacementHistogram(df,source='mp', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
     
 @ODMPlot("Position Histogram reference peak.png",
-         singleCycle=False,
-         multipleCycle=False,
-         constantVoltage=True,
+         requiresConstantVoltage=True,
          requiresReference=True)
 def plotConstantDisplacementHistogramRef(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     return plotConstantDisplacementHistogram(df,source='ref', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
@@ -379,20 +397,25 @@ def plotConstantDisplacementHistogram(df,source='diff', nbins=None, measurementN
     return figure, axes, save
 
 
-@ODMPlot("Timestamp-Displacement reference peak.png",constantVoltage=True, requiresReference=True)
+@ODMPlot("Timestamp-Displacement reference peak.png",
+         requiresConstantVoltage=True, 
+         requiresReference=True)
 def plotDisplacementVersusTimestampRef(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
     return plotDisplacementVersusTimestamp(df,sources='ref', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
     
-@ODMPlot("Timestamp-Displacement moving peak.png",constantVoltage=True, requiresReference=False)
+@ODMPlot("Timestamp-Displacement moving peak.png",
+         requiresConstantVoltage=True, 
+         requiresReference=False)
 def plotDisplacementVersusTimestampMoving(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
     return plotDisplacementVersusTimestamp(df,sources='mp', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
-
-@ODMPlot("Timestamp-Displacement differential.png",constantVoltage=True, requiresReference=True)
+    
+@ODMPlot("Timestamp-Displacement differential.png",
+         requiresConstantVoltage=True, 
+         requiresReference=True)
 def plotDisplacementVersusTimestampDiff(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
     return plotDisplacementVersusTimestamp(df,sources='diff', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
-
-
-@_BasicProgressReporter(entryMessage="Creating timestamp-displacement plot...")
+    
+@_BasicProgressReporter(entryMessage="Creating timestamp versus displacement plot...")
 def plotDisplacementVersusTimestamp(df,sources='diff', measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
     sources = sources.split(',')
     

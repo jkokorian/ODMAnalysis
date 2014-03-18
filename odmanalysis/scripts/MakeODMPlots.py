@@ -57,8 +57,8 @@ def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
     """
     
     kwargs = {'measurementName': measurementName, 'nmPerPx' : nmPerPx}
-    odmPlots = odmp.ODMPlot.getSuitablePlotFunctions(df)
-    for odmPlot in odmPlots:    
+    odmPlots = odmp.ODMPlot.getSuitablePlotDefinitions(df)
+    for odmPlot in odmPlots:
         odmPlot.runAndSave(df,savePath,**kwargs)
         
     print "ALL DONE"

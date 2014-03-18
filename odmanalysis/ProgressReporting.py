@@ -139,8 +139,10 @@ class BasicProgressReporter(object):
                     kwargs['progressReporter'] = p
             
             p.message(self.entryMessage)
-            f(*args,**kwargs)
+            result = f(*args,**kwargs)
+                        
             p.message(self.exitMessage)
+            return result
         
         wrapped_f.func_name = f.func_name
         return wrapped_f
