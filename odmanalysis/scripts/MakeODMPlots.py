@@ -86,8 +86,8 @@ def makeIntensityProfilePlots(df,movingPeakFitSettings,referencePeakFitSettings,
     
     kwargs = {'measurementName': measurementName, 'nmPerPx' : nmPerPx}
     if 'intensityProfile' in df.columns:
-        odmp.plotIntensityProfiles(df,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10, filename = savePath +"/IntensityProfiles.png",**kwargs)
-    
+        figure,axes,save = odmp.plotIntensityProfiles(df,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10,**kwargs)
+        save(savePath +"/IntensityProfiles.png")
 
 def main():
 
