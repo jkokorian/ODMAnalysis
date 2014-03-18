@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='odmanalysis',
-      version='0.4',
+      version='0.5',
       description='Toolkit for analyzing optical displacement measurements with subpixel accuracy.',
       url='http://github.com/jkokorian/odmanalysis',
       author='J. Kokorian',
