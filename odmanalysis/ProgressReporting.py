@@ -142,5 +142,5 @@ class BasicProgressReporter(object):
             f(*args,**kwargs)
             p.message(self.exitMessage)
         
-        wrapped_f.func_name = "%s_BasicProgressReporter" % f.func_name
+        wrapped_f.func_name = f.func_name
         return wrapped_f

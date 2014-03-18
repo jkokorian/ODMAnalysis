@@ -12,8 +12,83 @@ import matplotlib.dates as _mpld
 from matplotlib import animation as _animation
 from odmanalysis import stats as _ODMStats
 from odmanalysis.ProgressReporting import BasicProgressReporter as _BasicProgressReporter
+from threading import RLock
 
 
+class ODMPlot(object):
+    """
+    Decorate methods that produce plots from a processed odm dataframe with this
+    class to indicate for which kinds of data they should be returned by the PlotFactory.
+    """
+    
+    __odmPlots = []
+    __lock = RLock()
+    
+    @classmethod
+    def __addPlot(cls,odmPlot):
+        with cls.__lock:
+            cls.__odmPlots.append(odmPlot)
+    
+    @classmethod
+    def getSuitablePlotFunctions(cls,df):
+        return [odmPlot.plotFunction for odmPlot in cls.__odmPlots if odmPlot.isSuitableFor(df)]
+    
+    def __init__(self,singleCycle=True,multipleCycle=True,maxNumberOfCycles=200,constantVoltage=False,suitability_check_functions = []):
+        """
+        Parameters
+        ----------
+        
+        singleCycle: boolean, default True
+            The plot should be created for dataframes containing only a single cycle.
+        
+        multipleCycle: boolean, default True
+            The plot should be created for dataframes containing multiple cycles.
+            
+        maxNumberOfCycles: integer, default 200
+            If 'multipleCycle'==True, this number indicates the maximum number of cycles
+            the plot will still be created.
+        
+        constantActuatorVoltage: boolean, default False
+            The plot should be created for dataframes where the actuator voltage is constant.
+            
+        suitability_check_functions: list or tuple of functions, default []
+            Custom function with a single parameter accepting a dataframe to check
+            whether the plot should be created.
+        """
+        self.singleCycle = singleCycle
+        self.multipleCycle = multipleCycle
+        self.constantVoltage = constantVoltage
+        self.maxNumberOfCycles = maxNumberOfCycles
+        self.suitability_check_functions = suitability_check_functions
+    
+    def __call__(self,f):
+        
+        self.plotFunction = f
+        ODMPlot.__addPlot(self)
+        def wrapped_f(*args,**kwargs):
+            f(*args,**kwargs)
+        
+        wrapped_f.func_name = f.func_name
+        return wrapped_f
+        
+    def isSuitableFor(self,df):
+        result = True        
+        if (hasConstantVoltage(df) and not self.constantVoltage):
+            result = False
+        elif (hasSingleCycle(df) and not self.singleCycle):
+            result = False
+        elif (hasMultipleCycles(df) and not self.multipleCycle):
+            result = False
+        elif (df.cycleNumber.max() > self.maxNumberOfCycles):
+            result = False
+        elif (not all([check(df) for check in self.suitability_check_functions])):
+            result = False
+        
+        return result
+        
+        
+def hasSingleCycle(odmAnalysisDataFrame):
+    return not hasMultipleCycles(odmAnalysisDataFrame)
 
 def hasMultipleCycles(odmAnalysisDataFrame):
     return len(odmAnalysisDataFrame.cycleNumber.unique()) > 1
@@ -24,6 +99,7 @@ def hasReference(odmAnalysisDataFrame):
 def hasConstantVoltage(odmAnalysisDataFrame):
     return len(odmAnalysisDataFrame.actuatorVoltage.unique()) == 1
 
+@ODMPlot(maxNumberOfCycles=100)
 @_BasicProgressReporter(entryMessage="creating chi-square plots...")
 def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = None, nmPerPx=1):
     if not figure:    
@@ -45,6 +121,7 @@ def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = N
     return figure,axes
 
 
+@ODMPlot(multipleCycle=False)
 @_BasicProgressReporter(entryMessage="creating voltage-displacement graphs for single cycle...")
 def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
     #show voltage-displacement curve
@@ -71,7 +148,18 @@ def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=
     
     return figure,axes
 
+@ODMPlot(singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
+@_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
+def plotFirstCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
+    return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==1],corrected=corrected,showReferenceValues==showReferenceValues,filename=filename,measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes)
 
+@ODMPlot(singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
+@_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
+def plotLastCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
+    return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==df.cycleNumber.max()],corrected=corrected,showReferenceValues==showReferenceValues,filename=filename,measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes)
+
+
+@ODMPlot(singleCycle=False,maxNumberOfCycles=200)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacment graphs for multiple cycles...")
 def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:    
@@ -100,9 +188,10 @@ def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=F
         
     return figure, axes
 
+@ODMPlot(singleCycle=False,maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle voltage-displacement animation...")
 def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None):
-       
+    
     
     numberOfCycles = int(df.cycleNumber.max())    
 
@@ -154,6 +243,7 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     
     return anim
 
+@ODMPlot(singleCycle=False)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle average graph...")
 def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues=False, filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
@@ -179,6 +269,7 @@ def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues
         
     return figure,axes
 
+@ODMPlot(multipleCycle=False,constantVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating intensity profile plots...")
 def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10,filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
     if not figure:
@@ -208,6 +299,7 @@ def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,n
     
     return figure,axes
     
+@ODMPlot(singleCycle=False,multipleCycle=False,constantVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating histogram for constant displacement...")
 def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
     titlesDict = {'diff': 'differential','mp': 'moving peak', 'ref': 'reference peak'}
@@ -248,6 +340,7 @@ def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=Non
         
     return figure,axes
 
+@ODMPlot(constantVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating timestamp-displacement plot...")
 def plotDisplacementVersusTimestamp(df,sources='diff',filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):        
     sources = sources.split(',')
