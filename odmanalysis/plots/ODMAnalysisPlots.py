@@ -7,6 +7,7 @@ Created on Tue Dec 17 09:57:12 2013
 
 from __future__ import division as _division
 import numpy as _np
+import os as _os
 import matplotlib.pyplot as _plt
 import matplotlib.dates as _mpld
 from matplotlib import animation as _animation
@@ -33,7 +34,8 @@ class ODMPlot(object):
     def getSuitablePlotFunctions(cls,df):
         return [odmPlot.plotFunction for odmPlot in cls.__odmPlots if odmPlot.isSuitableFor(df)]
     
-    def __init__(self,singleCycle=True,multipleCycle=True,maxNumberOfCycles=200,constantVoltage=False,suitability_check_functions = []):
+        
+    def __init__(self,filename,singleCycle=True,multipleCycle=True,maxNumberOfCycles=200,constantVoltage=False,requiresReference=False,suitability_check_functions = []):
         """
         Parameters
         ----------
@@ -50,15 +52,20 @@ class ODMPlot(object):
         
         constantActuatorVoltage: boolean, default False
             The plot should be created for dataframes where the actuator voltage is constant.
+        
+        requiresReference: boolean, default False
+            The plot is only created for dataframes that have a reference
             
         suitability_check_functions: list or tuple of functions, default []
             Custom function with a single parameter accepting a dataframe to check
             whether the plot should be created.
         """
+        self.filename = filename
         self.singleCycle = singleCycle
         self.multipleCycle = multipleCycle
         self.constantVoltage = constantVoltage
         self.maxNumberOfCycles = maxNumberOfCycles
+        self.requiresReference = requiresReference
         self.suitability_check_functions = suitability_check_functions
     
     def __call__(self,f):
@@ -81,10 +88,17 @@ class ODMPlot(object):
             result = False
         elif (df.cycleNumber.max() > self.maxNumberOfCycles):
             result = False
+        elif (not hasReference(df) and self.requiresReference):
+            result = False
         elif (not all([check(df) for check in self.suitability_check_functions])):
             result = False
         
         return result
+    
+    def runAndSave(self,df,saveDir,**kwargs):
+        result = self.plotFunction(df,**kwargs)
+        savePath = _os.path.join(saveDir,self.filename)
+        result[-1](savePath)
         
         
 def hasSingleCycle(odmAnalysisDataFrame):
@@ -99,9 +113,9 @@ def hasReference(odmAnalysisDataFrame):
 def hasConstantVoltage(odmAnalysisDataFrame):
     return len(odmAnalysisDataFrame.actuatorVoltage.unique()) == 1
 
-@ODMPlot(maxNumberOfCycles=100)
+@ODMPlot("chi-square.png", maxNumberOfCycles=100)
 @_BasicProgressReporter(entryMessage="creating chi-square plots...")
-def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = None, nmPerPx=1):
+def plotChiSquare(df, savePath=None, measurementName="", figure = None, axes = None, nmPerPx=1, **kwargs):
     if not figure:    
         figure = _plt.figure('Chi-Squared (%s)' % measurementName)
     if not axes:
@@ -115,15 +129,15 @@ def plotChiSquare(df, filename=None, measurementName="", figure = None, axes = N
     axes.set_ylabel("$\chi^2$")
     axes.set_xlabel("Actuator Voltage (V)")
 
-    if (filename):
-        figure.savefig(filename,dpi=200)
+    def save(path):
+        figure.savefig(path,dpi=200)
     
-    return figure,axes
+    return figure,axes, save
 
 
-@ODMPlot(multipleCycle=False)
+@ODMPlot("Voltage-Displacement.png",multipleCycle=False)
 @_BasicProgressReporter(entryMessage="creating voltage-displacement graphs for single cycle...")
-def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
+def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
     #show voltage-displacement curve
     if not figure:    
         figure = _plt.figure('Voltage Displacement %s (%s)' % ("(corrected)" if corrected else "", measurementName))
@@ -143,27 +157,27 @@ def plotSingleCycleVoltageDisplacement(df, corrected=False, showReferenceValues=
     tx.set_ylabel('Displacement (nm)')
     tx.set_ylim(nmPerPx * px for px in axes.get_ylim())
 
-    if (filename):
-        figure.savefig(filename,dpi=200)
+    def save(path):
+        figure.savefig(path,dpi=200)
     
-    return figure,axes
+    return figure,axes, save
 
-@ODMPlot(singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
+@ODMPlot("Voltage-Displacement (first cycle).png", singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
-def plotFirstCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
-    return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==1],corrected=corrected,showReferenceValues==showReferenceValues,filename=filename,measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes)
+def plotFirstCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
+    return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==1],measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes, **kwargs)
 
-@ODMPlot(singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
+@ODMPlot("Voltage-Displacement (last cycle).png",singleCycle=False,multipleCycle=True,maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
-def plotLastCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure = None, axes = None):
-    return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==df.cycleNumber.max()],corrected=corrected,showReferenceValues==showReferenceValues,filename=filename,measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes)
+def plotLastCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
+    return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==df.cycleNumber.max()],measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes, **kwargs)
 
 
-@ODMPlot(singleCycle=False,maxNumberOfCycles=200)
+@ODMPlot("Voltage-Displacement (all cycles).png",singleCycle=False,maxNumberOfCycles=200)
 @_BasicProgressReporter(entryMessage="Creating voltage-displacment graphs for multiple cycles...")
-def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
+def plotMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     if not figure:    
-        figure = _plt.figure('Multiple cycles %s (%s)' % ("(corrected)" if corrected else "", measurementName))
+        figure = _plt.figure('Multiple cycles (%s)' % measurementName)
     if not axes:
         axes = _plt.subplot(111)
     axes.set_ylabel("Displacement (px)")
@@ -183,14 +197,14 @@ def plotMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=F
     tx.set_ylabel('Displacement (nm)')
     tx.set_ylim(nmPerPx * px for px in axes.get_ylim())
     
-    if (filename):
-        figure.savefig(filename,dpi=200)
-        
-    return figure, axes
+    def save(path):
+        figure.savefig(path,dpi=200)
+    
+    return figure,axes, save
 
-@ODMPlot(singleCycle=False,maxNumberOfCycles=_np.infty)
+@ODMPlot("Voltage-Displacement.mp4",singleCycle=False,maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle voltage-displacement animation...")
-def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValues=False, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None):
+def animateMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None, **kwargs):
     
     
     numberOfCycles = int(df.cycleNumber.max())    
@@ -238,16 +252,17 @@ def animateMultiCycleVoltageDisplacement(df, corrected=False, showReferenceValue
     # your system: for more information, see
     # http://matplotlib.sourceforge.net/api/animation_api.html
     #progressReporter.message("Creating movie...")
-    anim.save(filename, fps=10, extra_args=['-vcodec', 'libx264'],dpi=dpi)
+    def save(path):    
+        anim.save(path, fps=10, extra_args=['-vcodec', 'libx264'],dpi=dpi)
     
     
-    return anim
+    return anim, save
 
-@ODMPlot(singleCycle=False)
+@ODMPlot("Voltage-Displacement (mean).png",singleCycle=False)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle average graph...")
-def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues=False, filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
+def plotMultiCycleMeanVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     if not figure:
-        figure = _plt.figure('Multiple cycle average %s (%s)' % ("(corrected)" if corrected else "", measurementName))
+        figure = _plt.figure('Multiple cycle average (%s)' % measurementName)
     if not axes:
         axes = _plt.subplot(111)
     axes.set_ylabel("Displacement (px)")
@@ -264,14 +279,13 @@ def plotMultiCycleMeanVoltageDisplacement(df,corrected=False,showReferenceValues
     tx.set_ylabel('Displacement (nm)')
     tx.set_ylim(nmPerPx * px for px in axes.get_ylim())
     
-    if (filename):
-        figure.savefig(filename,dpi=200)
-        
-    return figure,axes
+    def save(path):
+        figure.savefig(path,dpi=200)
+    
+    return figure,axes, save
 
-@ODMPlot(multipleCycle=False,constantVoltage=True)
 @_BasicProgressReporter(entryMessage="Creating intensity profile plots...")
-def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10,filename=None,measurementName="", nmPerPx=1, figure=None, axes=None):
+def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,numberOfProfiles=10,measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     if not figure:
         figure = _plt.figure('Intensity Profiles (%s)' % measurementName)
     if not axes:
@@ -294,14 +308,38 @@ def plotIntensityProfiles(dfRaw,movingPeakFitSettings,referencePeakFitSettings,n
     ty.set_xlabel('x ($\mu$m)')
     ty.set_xlim(nmPerPx / 1000 * px for px in axes.get_xlim())
     
-    if (filename):
-        figure.savefig(filename,dpi=200)
+    def save(path):
+        figure.savefig(path,dpi=200)
     
-    return figure,axes
+    return figure,axes, save
+
+@ODMPlot("Position Histogram differential.png",
+         singleCycle=False,
+         multipleCycle=False,
+         constantVoltage=True,
+         requiresReference=True)
+def plotConstantDisplacementHistogramDiff(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
+    return plotConstantDisplacementHistogram(df,source='diff', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
     
-@ODMPlot(singleCycle=False,multipleCycle=False,constantVoltage=True)
+    
+@ODMPlot("Position Histogram moving peak.png",
+         singleCycle=False,
+         multipleCycle=False,
+         constantVoltage=True)
+def plotConstantDisplacementHistogramMoving(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
+    return plotConstantDisplacementHistogram(df,source='mp', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
+    
+@ODMPlot("Position Histogram reference peak.png",
+         singleCycle=False,
+         multipleCycle=False,
+         constantVoltage=True,
+         requiresReference=True)
+def plotConstantDisplacementHistogramRef(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
+    return plotConstantDisplacementHistogram(df,source='ref', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
+    
+    
 @_BasicProgressReporter(entryMessage="Creating histogram for constant displacement...")
-def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):
+def plotConstantDisplacementHistogram(df,source='diff', nbins=None, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):
     titlesDict = {'diff': 'differential','mp': 'moving peak', 'ref': 'reference peak'}
     
     if not figure:    
@@ -335,14 +373,27 @@ def plotConstantDisplacementHistogram(df,source='diff', nbins=None, filename=Non
     ty.set_xlim(nmPerPx * px for px in axes.get_xlim())
 
     
-    if (filename):
-        figure.savefig(filename,dpi=200)
-        
-    return figure,axes
+    def save(path):
+        figure.savefig(path,dpi=200)
+    
+    return figure, axes, save
 
-@ODMPlot(constantVoltage=True)
+
+@ODMPlot("Timestamp-Displacement reference peak.png",constantVoltage=True, requiresReference=True)
+def plotDisplacementVersusTimestampRef(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
+    return plotDisplacementVersusTimestamp(df,sources='ref', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
+    
+@ODMPlot("Timestamp-Displacement moving peak.png",constantVoltage=True, requiresReference=False)
+def plotDisplacementVersusTimestampMoving(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
+    return plotDisplacementVersusTimestamp(df,sources='mp', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
+
+@ODMPlot("Timestamp-Displacement differential.png",constantVoltage=True, requiresReference=True)
+def plotDisplacementVersusTimestampDiff(df, measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
+    return plotDisplacementVersusTimestamp(df,sources='diff', measurementName=measurementName, nmPerPx=nmPerPx, figure=figure, axes=axes, **kwargs)
+
+
 @_BasicProgressReporter(entryMessage="Creating timestamp-displacement plot...")
-def plotDisplacementVersusTimestamp(df,sources='diff',filename=None, measurementName="", nmPerPx=1, figure=None, axes=None):        
+def plotDisplacementVersusTimestamp(df,sources='diff', measurementName="", nmPerPx=1, figure=None, axes=None, **kwargs):        
     sources = sources.split(',')
     
     titlesDict = {'diff': 'differential','mp': 'moving peak', 'ref': 'reference peak'}
@@ -359,16 +410,12 @@ def plotDisplacementVersusTimestamp(df,sources='diff',filename=None, measurement
     for source in sources:
         if (source=='diff'):
             displacementValues = df.displacement
-            #linearDriftValues = [m.linearDrift_diff for m in self.oda.measurementRecords]
         elif (source=='mp'):
             displacementValues = df.displacement_mp
-            #linearDriftValues = [m.linearDrift_mp for m in self.oda.measurementRecords]
         elif (source=='ref'):
             displacementValues = df.displacement_ref
-            #linearDriftValues = [m.linearDrift_ref for m in self.oda.measurementRecords]
                 
         axes.plot(times,displacementValues,alpha=alpha,label=titlesDict[source])
-        #axes.plot(times,linearDriftValues,'r--')
         
     axes.set_xlabel('Time (s)')
     axes.set_ylabel('Position (px)')
@@ -380,6 +427,8 @@ def plotDisplacementVersusTimestamp(df,sources='diff',filename=None, measurement
     tx.set_ylabel('Position (nm)')
     tx.set_ylim(nmPerPx * px for px in axes.get_ylim())
     
-    if (filename):
-        figure.savefig(filename,dpi=200)
+    def save(path):
+        figure.savefig(path,dpi=200)
+    
+    return figure, axes, save
     
