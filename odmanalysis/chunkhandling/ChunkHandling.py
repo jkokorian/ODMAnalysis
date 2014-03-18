@@ -25,8 +25,8 @@ class ChunkReader(object):
         self.path = path
         self.dataframes = []
     
-    def read_next(self,*args):
-        print "reading"
+    @_BasicProgressReporter(entryMessage="Reading...",exitMessage="")
+    def read_next(self,progressReporter=None):
         with file(self.path,'r') as stream:
             reader = _odm.getODMDataReader(stream,chunksize=1000, skipDataRows=self.nlinesRead)
             
@@ -36,12 +36,15 @@ class ChunkReader(object):
                 df = df[df.intensityProfile.map(len) > 0]
         
         self.nlinesRead += len(df.index)
-        print "%i new lines read" % len(df.index)
+        if (progressReporter):
+            progressReporter.message("%i new lines read" % len(df.index))
         return df
     
 
 class ChunkWriter(object):
-    
+    """
+    Appends an ODM analysis dataframe (chunk) to a csv file.
+    """
     def __init__(self,outputFile):
         self.outputFile = outputFile
         self.outStream = None
