@@ -62,6 +62,10 @@ def getActuationDirectionAndCycle(dataframe,inplace=True,startDirection='forward
     df.cycleNumber.fillna(method='pad',inplace=True)
     return df
 
+def removeIncompleteCycles(df,inplace=True):
+    if (df.cycleNumber[-1] != df.cycleNumber[-2]):
+        df.drop(df.tail(1).index,inplace=inplace)
+
 def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     """
     Reads a data.csv file that has been written by a LabVIEW ODM Measurement and returns

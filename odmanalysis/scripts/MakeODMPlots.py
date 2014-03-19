@@ -56,6 +56,7 @@ def makeDisplacementPlots(df,savePath,measurementName="",nmPerPx=1):
         The path where the plot images should be saved to
     """
     
+    _odm.removeIncompleteCycles(df)
     kwargs = {'measurementName': measurementName, 'nmPerPx' : nmPerPx}
     odmPlots = odmp.ODMPlot.getSuitablePlotDefinitions(df)
     for odmPlot in odmPlots:
