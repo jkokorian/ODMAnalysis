@@ -2,6 +2,7 @@
 import os
 import sys
 import odmanalysis as odm
+from MakeODMPlots import makeDisplacementPlots, makeIntensityProfilePlots
 from odmanalysis import gui
 from odmanalysis.chunkhandling import ChunkedODMDataProcessor,ChunkWriter
 from multiprocessing import Process, Queue
@@ -28,10 +29,11 @@ def main():
     
     measurementName = os.path.split(os.path.split(filename)[0])[1]
     
+    outputFilename = commonPath + "/odmanalysis.csv"
     
     readerProcess, readerQueue = startReadAsync(filename)
     dataProcessor = ChunkedODMDataProcessor(commonPath)
-    chunkWriter = ChunkWriter(commonPath + "/odmanalysis.csv")
+    chunkWriter = ChunkWriter(outputFilename)
     
     while True:
         try:        
@@ -44,8 +46,14 @@ def main():
         if len(rawChunk) is not 0:
             processedChunk = dataProcessor.processDataFrame(rawChunk)
             chunkWriter.writeDataFrame(processedChunk)
-        
-            
+    
+    readerProcess.join()
+    
+    #make plots
+    df = odm.readAnalysisData(outputFilename)
+    settings = odm.CurveFitSettings.loadFromFile(commonPath + '/odmSettings.ini')
+    makeDisplacementPlots(df,commonPath,measurementName,settings.pxToNm)
+
 if __name__ == "__main__":
     main()
     
