@@ -38,6 +38,9 @@ class ODMPlot(object):
     def getSuitablePlotDefinitions(cls,df):
         return [odmPlot for odmPlot in cls.__odmPlots if odmPlot.isSuitableFor(df)]
     
+    @classmethod
+    def getRegisteredPlotDefinitions(cls):
+        return cls.__odmPlots[:]
         
     def __init__(self,filename,requiresSingleCycle=False,requiresMultipleCycle=False,maxNumberOfCycles=200,requiresConstantVoltage=False,requiresVariableVoltage=False,requiresReference=False,suitability_check_functions = []):
         """
@@ -77,16 +80,24 @@ class ODMPlot(object):
         self.suitability_check_functions = suitability_check_functions
     
     def __call__(self,f):
-        
+        """
+        Decorates the function.
+        """
         self.plotFunction = f
         ODMPlot.__addPlot(self)
-        def wrapped_f(*args,**kwargs):
-            return f(*args,**kwargs)
-        
-        wrapped_f.func_name = f.func_name
-        return wrapped_f
-        
+        return f
+    
+    def __str__(self):
+        return self.__repr__()
+    
+    def __repr__(self):
+        return "<ODMPlot: self.plotFunction.func_name>"
+    
     def isSuitableFor(self,df):
+        """
+        Checks whether the decorated ODMPlot function should be run for the target
+        dataframe, based on the arguments passed to the ODMPlot decorator.
+        """
         result = True
         if (self.requiresConstantVoltage and not hasConstantVoltage(df)):
             result = False
@@ -106,6 +117,10 @@ class ODMPlot(object):
         return result
     
     def runAndSave(self,df,saveDir,**kwargs):
+        """
+        Runs the decorated ODMPlot function and saves the result by invoking
+        the last return value the function returns.
+        """
         result = self.plotFunction(df,**kwargs)
         savePath = _os.path.join(saveDir,self.filename)
         result[-1](savePath)
@@ -220,6 +235,7 @@ def plotMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=
         figure.savefig(path,dpi=200)
     
     return figure,axes, save
+    
 
 @ODMPlot("Voltage-Displacement.mp4",
          requiresMultipleCycle=True,
@@ -227,7 +243,17 @@ def plotMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=
          maxNumberOfCycles=_np.infty)
 @_BasicProgressReporter(entryMessage="Creating multiple cycle voltage-displacement animation...")
 def animateMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure=None, axes=None, dpi=200, progressReporter=None, **kwargs):
+    """
+    Creates an animation of the voltage displacement curves of all the cycles of a 
+    multiple-cycle measurement. Each cycle is shown in a single frame, at 10 frames
+    per second.
     
+    System requirements
+    -------------------
+    
+    This function uses the matplotlib animation package. To render the animation, ffmpeg
+    should be installed on your system. For more information on ffmpeg, see: http://www.ffmpeg.org/
+    """
     
     numberOfCycles = int(df.cycleNumber.max())    
 
