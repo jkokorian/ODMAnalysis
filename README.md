@@ -1,5 +1,5 @@
-ODM Analysis package
-============
+ODM Analysis package for Python
+===============================
 
 Summary
 -------
