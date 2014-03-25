@@ -20,6 +20,31 @@ class ODMPlot(object):
     """
     Decorate methods that produce plots from a processed odm dataframe with this
     class to indicate for which kinds of data they should be returned by the PlotFactory.
+    
+    The decorator constructor allows several options to indicate for which kinds of
+    data the plot is suitable.
+    
+    Functions that are decorated with this class should at least allow the following arguments
+    
+    args:
+        df, pandas.DataFrame: The odm analysis dataframe
+    
+    kwargs:        
+        measurementName, String: Name of the measurement
+        nmPerPx, float: Number of nanometers per pixel
+        figure, matplotlib.Figure: optional existing figure to use to create the plot
+        axes, matplotlib.Axes: optional existing axes to use to create the plot
+        **kwargs: The function should allow for other kwargs to be passed but not used.
+    
+    Usage
+    -----
+    
+    To retrieve a list of all the functions that are decorated with @ODMPlot(), call
+    the appropriate class method:
+    
+    >>> ODMPlot.getRegisteredPlotFunctions()
+    
+    
     """
     
     __odmPlots = []
@@ -41,6 +66,10 @@ class ODMPlot(object):
     @classmethod
     def getRegisteredPlotDefinitions(cls):
         return cls.__odmPlots[:]
+    
+    @classmethod
+    def getRegisteredPlotFunctions(cls):
+        return [odmPlot.plotFunction for odmPlot in cls.__odmPlots]
         
     def __init__(self,filename,requiresSingleCycle=False,requiresMultipleCycle=False,maxNumberOfCycles=200,requiresConstantVoltage=False,requiresVariableVoltage=False,requiresReference=False,suitability_check_functions = []):
         """
