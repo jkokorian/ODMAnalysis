@@ -69,7 +69,7 @@ odm_clean_data | Removes all units from numerical values in the raw data file. (
 All scripts display a gui to facilitate user interactions. 
 
 
-### IPython notebook ###
+### IPython notebook or any other python script that you write yourself ###
 
 We use interactive python and the IPython notebook in particular to 'play around' with the data that we get. Under the hood, ODMAnalysis relies heavily on 'pandas', a fantastic tool for doing just that. ODMAnalysis contains many functions to easily produce pandas DataFrame objects from the raw input data or from the processed data.
 
