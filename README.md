@@ -4,13 +4,13 @@ ODM Analysis package
 Summary
 -------
 
-The 'odmanalysis' package for python is a comprehensive toolkit for the semi-automated analysis of optical-displacement measurements in MEMS devices as described in Kokorian2014. It takes a data.csv input file that contains a series of captured intensity profiles at different actuator voltages and and analyzes the displacement of a peak in the intensity profile with respect the the position of the peak in the first intensity profile.
+The 'odmanalysis' package for python is a comprehensive toolkit for the semi-automated analysis of optical-displacement measurements in MEMS devices as published by [Kokorian et al][Kokorian2014a]. It takes a data.csv input file that contains a series of captured intensity profiles at different actuator voltages and and analyzes the displacement of a peak in the intensity profile with respect the the position of the peak in the first intensity profile.
 
 
 Requirements
 ------------
 
-ODMAnalysis can be used on any computer with python 2.7x and distutils installed. We used python xy for development, but any other distribution should do. ODManalysis has not yet been tested on Python 3.x.
+ODMAnalysis can be used on any computer with python 2.7x and distutils installed. We used python xy for development, but any other distribution should do. ODMAnalysis does not yet work on python 3.x.
 
 
 Input data formats
@@ -26,6 +26,7 @@ The intensity profile number array should have the same length for the entire cs
 
 We are working on including tools to extract this kind of data from movie files and such, but for now you will have to cook-up the csv file yourself. We use LabVIEW (which we regret very much) to do the actual measurements and write the csv files.
 
+
 Installation
 ------------
 
@@ -34,7 +35,6 @@ Download the source code, unzip and open a command prompt in the directory where
 If you have pip installed, execute the following command:
 ```
 pip install .
-
 ```
 
 Or without pip:
@@ -113,3 +113,4 @@ Licence
 
 Pending
 
+[Kokorian2014a]: http://dx.doi.org/10.1109/MEMSYS.2014.6765707  "An optical in-plane displacement measurement technique with sub-nanometer accuracy based on curve-fitting"
