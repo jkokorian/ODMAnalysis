@@ -30,9 +30,14 @@ We are working on including tools to extract this kind of data from movie files 
 Installation
 ------------
 
-Download the source code, unzip and open a command prompt in the directory where setup.py is located.
+To install directly from github, run:
 
-If you have pip installed, execute the following command:
+```
+pip install https://github.com/jkokorian/ODMAnalysis/
+```
+
+Or download the source code, unzip, open a command prompt in the directory where setup.py is located and run:
+
 ```
 pip install .
 ```
