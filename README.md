@@ -23,7 +23,7 @@ ODMAnalysis currently supports only a single input data format at present, which
 * Intensity Profile: a semicolon-separated list of integers, bounded by <>. Like: 
 
 ```
-* <18754;9829387;8723409;...;98238>
+<18754;9829387;8723409;...;98238>
 ```
 
 The intensity profile number array should have the same length for the entire csv file, or be completely empty: <>.
