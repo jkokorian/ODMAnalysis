@@ -215,7 +215,7 @@ def readCurveFitResults(fitResultsPcl):
         The index of the dataframe is equal to the 'timestamp' column of the corresponding 'odmanalysis.csv' file.
     """
     
-    df = _pd.DataFrame.load(fitResultsPcl)
+    df = _pd.read_pickle(fitResultsPcl)
     return df
 
 
@@ -400,8 +400,8 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
     
     progress = 0.0
     total = len(df.index)
-    for i in df.index:
-         ydata = intensityProfiles.get_value(i)[xmin:xmax]
+    for i in range(len(df)):
+         ydata = intensityProfiles.iloc[i][xmin:xmax]
          popt,pcov = _curve_fit(fitFunction,\
                   xdata = xdata,\
                   ydata = ydata,\

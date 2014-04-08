@@ -105,7 +105,7 @@ def fitRawODMData(filename):
     fitResultColumns = ['curveFitResult_mp']
     if 'curveFitResult_ref' in df.columns:
         fitResultColumns += ['curveFitResult_ref']
-    df[fitResultColumns].save(commonPath + '/fitResults.pcl')
+    df[fitResultColumns].to_pickle(commonPath + '/fitResults.pcl')
     sys.stdout.write("done\r\n")
     
     #save the used fit functions and fit settings as pickled objects
