@@ -12,7 +12,7 @@ import sys
 import os
 from Queue import Queue, Full
 import odmanalysis.gui as gui
-from odmanalysis.chunkhandling import ChunkedODMDataProcessor, ChunkReader, ChunkWriter
+from odmanalysis.chunkhandling import ChunkedODMDataProcessor, ChunkReader, ChunkWriter, ReturnActionConsumerThread
 
 class OMDCsvChunkHandler(FileSystemEventHandler):
     """
