@@ -54,7 +54,7 @@ class OMDCsvChunkHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if (event.src_path == self.inputFile):
             try:
-                self.fileQueue.put(True,block=False)
+                self.fileQueue.put((),block=False)
             except Full:
                 pass
     

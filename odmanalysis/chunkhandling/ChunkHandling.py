@@ -27,6 +27,8 @@ class ChunkReader(object):
     
     @_BasicProgressReporter(entryMessage="Reading...",exitMessage="")
     def read_next(self,progressReporter=None):
+        df = None
+        
         with file(self.path,'r') as stream:
             reader = _odm.getODMDataReader(stream,chunksize=1000, skipDataRows=self.nlinesRead)
             
@@ -35,10 +37,13 @@ class ChunkReader(object):
                 df = _pd.concat(chunks)
                 df = df[df.intensityProfile.map(len) > 0]
         
-        self.nlinesRead += len(df.index)
-        if (progressReporter):
-            progressReporter.message("%i new lines read" % len(df.index))
+        if (df is not None):
+            self.nlinesRead += len(df.index)
+            if (progressReporter):
+                progressReporter.message("%i new lines read" % len(df.index))
+        
         return df
+        
     
 
 class ChunkWriter(object):
@@ -174,7 +179,7 @@ class ReturnActionConsumerThread(_Thread):
     the return data is queued into the outputQueue.
     """    
     
-    def __init__(self,action,inputQueue,outputQueue=None):
+    def __init__(self,action,inputQueue,outputQueue=None,discardNoneValues=True):
         """
         Parameters
         ----------
@@ -189,6 +194,12 @@ class ReturnActionConsumerThread(_Thread):
         outputQueue: Queue instance
             The producer queue where return values from 'action' are written to. 
             If None, return values are discarded.
+        
+        discardNoneValues: boolean
+            Values of None read from the inputQueue are discarded without passing
+            them to the action function. None values that are returned from the
+            action function are also discarded without passing them to the output
+            queue.
         """
         
         super(ReturnActionConsumerThread,self).__init__()
@@ -196,6 +207,7 @@ class ReturnActionConsumerThread(_Thread):
         self.action = action
         self.inputQueue = inputQueue
         self.outputQueue = outputQueue
+        self.discardNoneValues = discardNoneValues
         print "consumer initialized"
         
     def run(self):
@@ -203,9 +215,15 @@ class ReturnActionConsumerThread(_Thread):
         while True:
             arg = self.inputQueue.get()
             self.inputQueue.task_done()
-            value = self.action(arg)
-            if (self.outputQueue is not None): 
-                self.outputQueue.put(value)
+            if isinstance(arg,tuple):
+                value = self.action(*arg)
+            else:
+                value = self.action(arg)
+            if (self.outputQueue is not None):
+                if (value is None and self.discardNoneValues):
+                    pass
+                else:
+                    self.outputQueue.put(value)
             
 
 def _getPeakFitSettingsFromUser(q,df,settings):
