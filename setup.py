@@ -39,8 +39,7 @@ setup(name='odmanalysis',
           'pandas',
           'matplotlib',
           'watchdog',
-          'wxpython',
-          'pyqt4'
+          'wxpython'
           ],
       entry_points={
           'console_scripts': [
