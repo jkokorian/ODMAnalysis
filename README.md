@@ -37,7 +37,7 @@ Installation
 To install directly from github, run:
 
 ```
-pip install https://github.com/jkokorian/ODMAnalysis/
+pip install git+git://github.com/jkokorian/ODMAnalysis/
 ```
 
 Or download the source code, unzip, open a command prompt in the directory where setup.py is located and run:
