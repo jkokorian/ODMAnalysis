@@ -28,7 +28,7 @@ ODMAnalysis currently supports only a single input data format at present, which
 
 The intensity profile number array should have the same length for the entire csv file, or be completely empty: <>.
 
-We are working on including tools to extract this kind of data from movie files and such, but for now you will have to cook-up the csv file yourself. We use LabVIEW (which we regret very much) to do the actual measurements and write the csv files.
+We are working on including tools to extract this kind of data from movie files and such, but for now you will have to cook-up the csv file yourself. We use LabVIEW to do the actual measurements and write the csv files.
 
 
 Installation
