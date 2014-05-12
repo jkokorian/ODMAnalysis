@@ -51,9 +51,10 @@ def main():
     measurementName = os.path.split(os.path.split(filename)[0])[1]
     
     settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini')
-    print "settings loaded from local odmSettings.ini"
     
     df,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(filename)
+
+    settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini')    
     
     plotKwargs = {'savePath' : commonPath, 'measurementName' : measurementName, 'nmPerPx' : settings.pxToNm}
     print "creating plots..."
