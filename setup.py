@@ -21,7 +21,7 @@ setup(name='odmanalysis',
       url='http://github.com/jkokorian/odmanalysis',
       author='J. Kokorian',
       author_email='J.Kokorian@TUDelft.nl',
-      license='GPL',
+      license='GPLv3',
       packages=[
           'odmanalysis',
           'odmanalysis.gui',
@@ -36,7 +36,9 @@ setup(name='odmanalysis',
           'scipy',
           'pandas',
           'matplotlib',
-          'watchdog'
+          'watchdog',
+          'wxpython',
+          'pyqt4'
           ],
       entry_points={
           'console_scripts': [
