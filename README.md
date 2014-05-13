@@ -10,7 +10,7 @@ The 'odmanalysis' package for python is a comprehensive toolkit for the semi-aut
 Requirements
 ------------
 
-ODMAnalysis can be used on any computer with python 2.7x and distutils installed. We used python xy for development, but any other distribution should do. ODMAnalysis does not yet work on python 3.x.
+ODMAnalysis can be used on any computer with python 2.7x and distutils installed. We used python xy for development (http://www.pythonxy.org), but any other distribution should do. ODMAnalysis does not work on python 3.x.
 
 
 Input data formats
