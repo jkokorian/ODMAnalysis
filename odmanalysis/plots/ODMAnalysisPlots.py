@@ -298,7 +298,9 @@ def animateMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figu
     should be installed on your system. For more information on ffmpeg, see: http://www.ffmpeg.org/
     """
     
-    numberOfCycles = int(df.cycleNumber.max())    
+    numberOfCycles = int(df.cycleNumber.max())
+    if (progressReporter):
+        progressReporter.message("rendering %i frames..." % numberOfCycles)
 
     #create dummy axis and plot to determine xlim and ylim
     df1 = df[df.cycleNumber == numberOfCycles//2]
@@ -344,7 +346,7 @@ def animateMultiCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figu
     # http://matplotlib.sourceforge.net/api/animation_api.html
     #progressReporter.message("Creating movie...")
     def save(path):    
-        anim.save(path, fps=10, extra_args=['-vcodec', 'libx264'],dpi=dpi)
+        anim.save(path, fps=5, extra_args=['-vcodec', 'libx264'],dpi=dpi)
     
     
     return anim, save
