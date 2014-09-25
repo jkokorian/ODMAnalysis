@@ -41,9 +41,11 @@ class InteractiveCycleViewer(qt.QWidget):
         layout = qt.QVBoxLayout()        
         self.setLayout(layout)
         
-        self.cycleSlider = qt.QSlider()
+        self.cycleSlider = qt.QSlider(q.Qt.Horizontal)
+        self.cycleSlider.setTickPosition(qt.QSlider.TicksBothSides)
+        self.cycleSlider.setTickInterval(1)
         layout.addWidget(self.cycleSlider)
-        
+                
         self.graph = pg.PlotWidget()
         layout.addWidget(self.graph)
         
