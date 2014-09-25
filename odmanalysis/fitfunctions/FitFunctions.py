@@ -247,9 +247,9 @@ class ScaledSpline(DisplacementFitFunction):
     def __call__(self,x,x0,A,a0):
         return A*self.spline(x-x0)+a0
     
-    def estimateInitialParameters(self,intensityProfile,**kwargs):
+    def estimateInitialParameters(self,intensityProfile,filter_sigma=2,**kwargs):
         xValues = np.arange(len(intensityProfile))
-        yValues = gaussian_filter(intensityProfile,2)
+        yValues = gaussian_filter(intensityProfile,filter_sigma)
         self.spline = InterpolatedUnivariateSpline(xValues, yValues)
         return {'x0': 0.0,
                 'A': 1.0,
