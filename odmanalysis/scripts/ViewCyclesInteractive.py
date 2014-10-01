@@ -22,14 +22,11 @@ Created on Fri Dec 20 11:29:47 2013
 import sys as _sys
 import os as _os
 import odmanalysis as _odm
-import odmanalysis.plots as odmp
 import odmanalysis.gui as _gui
-from matplotlib import pyplot as _plt
 from PyQt4 import QtCore as q
 from PyQt4 import QtGui as qt
 import pyqtgraph as pg
 import numpy as _np
-import pandas as _pd
 
 
 class InteractiveCycleViewer(qt.QWidget):
@@ -41,10 +38,16 @@ class InteractiveCycleViewer(qt.QWidget):
         layout = qt.QVBoxLayout()        
         self.setLayout(layout)
         
+        hLayout = qt.QHBoxLayout()
+        layout.addLayout(hLayout)
+        
         self.cycleSlider = qt.QSlider(q.Qt.Horizontal)
         self.cycleSlider.setTickPosition(qt.QSlider.TicksBothSides)
         self.cycleSlider.setTickInterval(1)
-        layout.addWidget(self.cycleSlider)
+        hLayout.addWidget(self.cycleSlider)
+        
+        self.cycleNumberLabel = qt.QLabel("cycle 1")
+        hLayout.addWidget(self.cycleNumberLabel)
                 
         self.graph = pg.PlotWidget()
         layout.addWidget(self.graph)
@@ -67,22 +70,20 @@ class InteractiveCycleViewer(qt.QWidget):
 
         # connect signals
         self.cycleSlider.valueChanged.connect(self.showCycle)
+        self.cycleSlider.valueChanged.connect(lambda i: self.cycleNumberLabel.setText("cycle %i" % i))
         
-        self.showCycle()
+        self.showCycle(1)
         
-    def showCycle(self):
-        cycleNumber = self.cycleSlider.value()
+    
+    def showCycle(self,cycleNumber):
+        df = self.df
         dfFwd = df[(df.cycleNumber == cycleNumber) & (df.direction == 'forward')]
         dfBwd = df[(df.cycleNumber == cycleNumber) & (df.direction == 'backward')]
-        self.forwardPlot.setData(x=_np.array(dfFwd.actuatorVoltage),y=_np.array(dfFwd.displacement))
-        self.backwardPlot.setData(x=_np.array(dfBwd.actuatorVoltage),y=_np.array(dfBwd.displacement))
+        self.forwardPlot.setData(x=_np.array(dfFwd.actuatorVoltage),y=_np.array(dfFwd.displacement_nm))
+        self.backwardPlot.setData(x=_np.array(dfBwd.actuatorVoltage),y=_np.array(dfBwd.displacement_nm))
         
     
-    
-    
-
-
-if __name__ == "__main__":
+def main():    
     if (len(_sys.argv) > 1 and _os.path.exists(_sys.argv[1]) and _os.path.isfile(_sys.argv[1])):
         filename = _sys.argv[1]
     else:
@@ -92,18 +93,13 @@ if __name__ == "__main__":
     commonPath = _os.path.abspath(_os.path.split(filename)[0])
     measurementName = _os.path.split(_os.path.split(filename)[0])[1]
     
-    try:
-        settings = _odm.CurveFitSettings.loadFromFile(commonPath + '/odmSettings.ini')
-        print "settings loaded from local odmSettings.ini"
-    except:
-        settings = _gui.getSettingsFromUser(None)
-        settings.saveToFile(commonPath + '/odmSettings.ini')
-        print "settings saved to local odmSettings.ini"
-    
+        
     df = _odm.readAnalysisData(filename)
-    df.displacement*= settings.pxToNm
     
     app = qt.QApplication(_sys.argv)
     cycleViewer = InteractiveCycleViewer(df)
     cycleViewer.show()
     app.exec_()
+
+if __name__ == "__main__":
+    main()
