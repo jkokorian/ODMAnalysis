@@ -113,6 +113,12 @@ Scientific publications
 When you use this code for research and it contributes to a publication, please give the authors credit by citing:
 
 J. Kokorian, F. Buja, U. Staufer and W.M. van Spengen
+**"In-plane displacement detection with picometer accuracy on a conventional microscope"**, Journal of Microelectromechanical Systems, 2014
+http://dx.doi.org/10.1109/JMEMS.2014.2335153
+
+or
+
+J. Kokorian, F. Buja, U. Staufer and W.M. van Spengen
 **"An optical in-plane displacement measurement technique with sub-nanometer accuracy based on curve-fitting"**, 2014, _Proceedings of the IEEE 27th International Conference on Micro Electro Mechanical Systems (MEMS), 2014_, pages 580-583
 http://dx.doi.org/10.1109/MEMSYS.2014.6765707
 
