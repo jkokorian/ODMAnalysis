@@ -25,8 +25,10 @@ import odmanalysis as odm
 import odmanalysis.gui as gui
 import odmanalysis.fitfunctions as ff
 import pickle
+import argparse
 
-def fitRawODMData(filename):
+
+def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
     """
     This script opens and analyzes the target data.csv file produced by LabVIEW and
     analyzes the optical displacement of a peak relative to another peak.
@@ -59,27 +61,39 @@ def fitRawODMData(filename):
     
     globalSettings = odm.CurveFitSettings.loadFromFileOrCreateDefault('./CurveFitScriptSettings.ini')
     
-    settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini',prototype=globalSettings)
+    if (settingsFile is not None):
+        print "reading settings from %s" % settingsFile
+        settings = odm.CurveFitSettings.loadFromFile(settingsFile)
+    else:
+        settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini',prototype=globalSettings)
+        gui.getSettingsFromUser(settings)
+
     
     df = odm.readODMData(filename)
     
-    gui.getSettingsFromUser(settings)
-    
-    movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-    movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],movingPeakFitFunction,
-                                                       estimatorPromptPrefix="Moving peak:",
-                                                       windowTitle="Moving Peak estimates")
-    
-    try:
-        referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-        referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
-                                                                  estimatorPromptPrefix="Reference peak:",
-                                                                  windowTitle="Reference Peak estimates")
-    except: #exception occurs if user cancels the 'dialog'
-        referencePeakFitFunction = None        
-        referencePeakFitSettings = None
-        print 'no reference'
-    
+    if (fitSettingsFile is not None):
+        with file(fitSettingsFile,'r') as f:
+            print "reading fit settings from %s" % fitSettingsFile
+            settingsDict = pickle.load(f)
+            movingPeakFitSettings = settingsDict['movingPeakFitSettings']
+            referencePeakFitSettings = settingsDict['referencePeakFitSettings']
+        
+    else:
+        movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],movingPeakFitFunction,
+                                                           estimatorPromptPrefix="Moving peak:",
+                                                           windowTitle="Moving Peak estimates")
+        
+        try:
+            referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
+            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
+                                                                      estimatorPromptPrefix="Reference peak:",
+                                                                      windowTitle="Reference Peak estimates")
+        except: #exception occurs if user cancels the 'dialog'
+            referencePeakFitFunction = None        
+            referencePeakFitSettings = None
+            print 'no reference'
+        
     print "fitting a %s function..." % settings.defaultFitFunction
     df_movingPeak = odm.calculatePeakDisplacements(df.intensityProfile, movingPeakFitSettings, factor=100,maxfev=20000)
     
@@ -136,17 +150,32 @@ def fitRawODMData(filename):
 
 ##main script##
 def main():
+    
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("datafile",type=str,nargs="?",default=None)
+    parser.add_argument("--settings-file",dest="odm_settings_file",type=str,default=None,
+    		help="an odmSettings.ini file to get the settings from")
+    parser.add_argument("--fitfunction-params-file",dest="fitfunction_params_file",type=str,default=None,
+    		help="a json file with the fitfunction parameters to use")
+    args = parser.parse_args()
 
-    if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
-        filename = sys.argv[1]
+    if (not args.datafile is None and os.path.exists(args.datafile) and os.path.isfile(args.datafile)):
+        datafile = args.datafile
     else:
-        filename = gui.get_path("*.csv",defaultFile="data.csv")
+        datafile = gui.get_path("*.csv",defaultFile="data.csv")
+        
+    if (not args.odm_settings_file is None and os.path.exists(args.odm_settings_file) and os.path.isfile(args.odm_settings_file)):
+        odmSettingsFile = args.odm_settings_file
+    else:
+        odmSettingsFile = None
     
+    if (not args.fitfunction_params_file is None and os.path.exists(args.fitfunction_params_file) and os.path.isfile(args.fitfunction_params_file)):
+        ffSettingsFile = args.fitfunction_params_file
+    else:
+        ffSettingsFile = None
 
-    df,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(filename)
-    
-    raw_input("press any key to close")
-    
+    df,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(datafile,settingsFile=odmSettingsFile,fitSettingsFile=ffSettingsFile)
     
     
 if __name__ == "__main__":
