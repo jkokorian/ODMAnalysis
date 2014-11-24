@@ -242,7 +242,7 @@ def plotFirstCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure 
          requiresMultipleCycle=True,
          requiresVariableVoltage=True,
          maxNumberOfCycles=_np.infty)
-@_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of first cycle")
+@_BasicProgressReporter(entryMessage="Creating voltage-displacement graph of last cycle")
 def plotLastCycleVoltageDisplacement(df, measurementName="", nmPerPx=1, figure = None, axes = None, **kwargs):
     return plotSingleCycleVoltageDisplacement(df[df.cycleNumber==df.cycleNumber.max()],measurementName=measurementName,nmPerPx=nmPerPx,figure=figure,axes=axes, **kwargs)
 
