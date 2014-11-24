@@ -236,6 +236,10 @@ class Spline(DisplacementFitFunction):
     def getDisplacement(self,x0):
         return x0
     
+    def getEstimatorDefinitions(self):
+        estimators = []
+        return estimators
+    
 class ScaledSpline(DisplacementFitFunction):
     def __init__(self):
         super(ScaledSpline,self).__init__()
@@ -248,6 +252,58 @@ class ScaledSpline(DisplacementFitFunction):
         return A*self.spline(x-x0)+a0
     
     def estimateInitialParameters(self,intensityProfile,filter_sigma=2,**kwargs):
+        xValues = np.arange(len(intensityProfile))
+        yValues = gaussian_filter(intensityProfile,filter_sigma)
+        self.spline = InterpolatedUnivariateSpline(xValues, yValues)
+        return {'x0': 0.0,
+                'A': 1.0,
+                'a0': 0.0}
+        
+    def getDisplacement(self,x0,A,a0):
+        return x0
+        
+    def getEstimatorDefinitions(self):
+        estimators = []
+        return estimators
+        
+class ScaledSpline1(DisplacementFitFunction):
+    def __init__(self):
+        super(ScaledSpline1,self).__init__()
+        self.spline = None
+        
+    def getName(self):
+        return "Scaled Spline (sigma=1)"
+
+    def __call__(self,x,x0,A,a0):
+        return A*self.spline(x-x0)+a0
+    
+    def estimateInitialParameters(self,intensityProfile,filter_sigma=1,**kwargs):
+        xValues = np.arange(len(intensityProfile))
+        yValues = gaussian_filter(intensityProfile,filter_sigma)
+        self.spline = InterpolatedUnivariateSpline(xValues, yValues)
+        return {'x0': 0.0,
+                'A': 1.0,
+                'a0': 0.0}
+        
+    def getDisplacement(self,x0,A,a0):
+        return x0
+        
+    def getEstimatorDefinitions(self):
+        estimators = []
+        return estimators
+
+class ScaledSpline0(DisplacementFitFunction):
+    def __init__(self):
+        super(ScaledSpline0,self).__init__()
+        self.spline = None
+        
+    def getName(self):
+        return "Scaled Spline (sigma=0)"
+
+    def __call__(self,x,x0,A,a0):
+        return A*self.spline(x-x0)+a0
+    
+    def estimateInitialParameters(self,intensityProfile,filter_sigma=0,**kwargs):
         xValues = np.arange(len(intensityProfile))
         yValues = gaussian_filter(intensityProfile,filter_sigma)
         self.spline = InterpolatedUnivariateSpline(xValues, yValues)
@@ -339,11 +395,35 @@ class Sinc(DisplacementFitFunction):
     def getDisplacement(self,w,A,c,x0):
         return x0
 
+class SafeScaledSpline(DisplacementFitFunction):
+    def __init__(self):
+        super(SafeScaledSpline,self).__init__()
+        self.spline = None
+        
+    def getName(self):
+        return "Safe Scaled Spline"
 
+    def __call__(self,x,x0,A,a0):
+        return np.clip(A,0.8,1.2)*self.spline(x-x0)+a0
+    
+    def estimateInitialParameters(self,intensityProfile,filter_sigma=2,**kwargs):
+        xValues = np.arange(len(intensityProfile))
+        yValues = gaussian_filter(intensityProfile,filter_sigma)
+        self.spline = InterpolatedUnivariateSpline(xValues, yValues)
+        return {'x0': 0.0,
+                'A': 1.0,
+                'a0': 0.0}
+        
+    def getDisplacement(self,x0,A,a0):
+        return x0
+        
+    def getEstimatorDefinitions(self):
+        estimators = []
+        return estimators
 
 
 def createFitFunctions():
-    return [Merlijnian(),Gaussian(),Harmonic(),Jaapian(),Sinc(),DualHarmonic(),Spline(),ScaledSpline(),BoundedSpline()]
+    return [Merlijnian(),Gaussian(),Harmonic(),Jaapian(),Sinc(),DualHarmonic(),Spline(),ScaledSpline0(),ScaledSpline1(),ScaledSpline(),BoundedSpline()]
 
 def createFitFunction(name):
     fitFunctionsDict = {ff.getName() : ff for ff in createFitFunctions()}
