@@ -28,33 +28,56 @@ of graphs is produced and saved.)
 This script calls the 'FitRawODMData' script (which only produces raw output data)
 under the hood.
 """
-
-import odmanalysis as odm
 import odmanalysis.gui as gui
 from FitRawODMData import fitRawODMData
 from MakeODMPlots import makeDisplacementPlots, makeIntensityProfilePlots
 
 import os
-import sys
 import matplotlib.pyplot as plt
+import argparse
 
 
 
-##main script##
 def main():
-    if (len(sys.argv) > 1 and os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
-        filename = sys.argv[1]
-    else:
-        filename = gui.get_path("*.csv",defaultFile="data.csv")
     
-    commonPath = os.path.abspath(os.path.split(filename)[0])
-    measurementName = os.path.split(os.path.split(filename)[0])[1]
-    
-    settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini')
-    
-    df,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(filename)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("datafile",type=str,nargs="?",default=None)
+    parser.add_argument("--settings-file",dest="odm_settings_file",type=str,default=None,
+    		help="an odmSettings.ini file to get the settings from")
+    parser.add_argument("--fitfunction-params-file",dest="fitfunction_params_file",type=str,default=None,
+    		help="a json file with the fitfunction parameters to use")
+    parser.add_argument("--show",dest="show_plots",action="store_true")
+    parser.add_argument("--noshow",dest="show_plots",action="store_false")
+    parser.add_argument("--separate-cycles",dest="separate_cycles",action="store_true")
+    parser.add_argument("--remove-incomplete-cycles",dest='remove_incomplete_cycles',action="store_true")
+    parser.set_defaults(show_plots=True,separate_cycles=False,remove_incomplete_cycles=False)
+    args = parser.parse_args()
 
-    settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini')    
+    if (not args.datafile is None and os.path.exists(args.datafile) and os.path.isfile(args.datafile)):
+        datafile = args.datafile
+    else:
+        datafile = gui.get_path("*.csv",defaultFile="data.csv")
+        
+    if (not args.odm_settings_file is None and os.path.exists(args.odm_settings_file) and os.path.isfile(args.odm_settings_file)):
+        odmSettingsFile = args.odm_settings_file
+    else:
+        odmSettingsFile = None
+    
+    if (not args.fitfunction_params_file is None and os.path.exists(args.fitfunction_params_file) and os.path.isfile(args.fitfunction_params_file)):
+        ffSettingsFile = args.fitfunction_params_file
+    else:
+        ffSettingsFile = None
+    
+    
+    commonPath = os.path.abspath(os.path.split(datafile)[0])
+    measurementName = os.path.split(commonPath)[1]
+    
+    df,settings,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(datafile,
+                                                                                               settingsFile=odmSettingsFile,
+                                                                                               fitSettingsFile=ffSettingsFile,
+                                                                                               fitCyclesSeparately=args.separate_cycles,
+                                                                                               removeIncompleteCycles=args.remove_incomplete_cycles)
+    
     
     plotKwargs = {'savePath' : commonPath, 'measurementName' : measurementName, 'nmPerPx' : settings.pxToNm}
     print "creating plots..."
@@ -62,7 +85,8 @@ def main():
     makeIntensityProfilePlots(df, movingPeakFitSettings,referencePeakFitSettings, **plotKwargs)
     
     print "ALL DONE"
-    plt.show()
+    if args.show_plots == True:
+        plt.show()
 
 
 if __name__=="__main__":

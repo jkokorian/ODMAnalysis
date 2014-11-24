@@ -26,9 +26,11 @@ import odmanalysis.gui as gui
 import odmanalysis.fitfunctions as ff
 import pickle
 import argparse
+import pandas as _pd
+import subprocess
 
 
-def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
+def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None,fitCyclesSeparately=False,removeIncompleteCycles=False):
     """
     This script opens and analyzes the target data.csv file produced by LabVIEW and
     analyzes the optical displacement of a peak relative to another peak.
@@ -59,17 +61,19 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
     commonPath = os.path.abspath(os.path.split(filename)[0])
     measurementName = os.path.split(os.path.split(filename)[0])[1]
     
-    globalSettings = odm.CurveFitSettings.loadFromFileOrCreateDefault('./CurveFitScriptSettings.ini')
+    globalSettings = odm.CurveFitSettings.loadFromFileOrCreateDefault(os.path.expanduser('~') + '/odmSettings.ini')
     
     if (settingsFile is not None):
         print "reading settings from %s" % settingsFile
-        settings = odm.CurveFitSettings.loadFromFile(settingsFile)
+        templateSettings = odm.CurveFitSettings.loadFromFile(settingsFile)
+        settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini',prototype=templateSettings)
     else:
         settings = odm.CurveFitSettings.loadFromFileOrCreateDefault(commonPath + '/odmSettings.ini',prototype=globalSettings)
         gui.getSettingsFromUser(settings)
 
     
     df = odm.readODMData(filename)
+    odm.removeIncompleteCycles(df)
     
     if (fitSettingsFile is not None):
         with file(fitSettingsFile,'r') as f:
@@ -95,13 +99,33 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
             print 'no reference'
         
     print "fitting a %s function..." % settings.defaultFitFunction
-    df_movingPeak = odm.calculatePeakDisplacements(df.intensityProfile, movingPeakFitSettings, factor=100,maxfev=20000)
+    print "fitting moving peak..."
+    if (fitCyclesSeparately):
+        movingPeakDataFrames = []        
+        for cycleNumber,group in df.groupby('cycleNumber'):
+            print "Cycle %i" % cycleNumber
+            df_movingPeak = odm.calculatePeakDisplacements(group.intensityProfile, movingPeakFitSettings, factor=100,maxfev=20000)
+            movingPeakDataFrames.append(df_movingPeak)
+        df_movingPeak = _pd.concat(movingPeakDataFrames)
+    
+    else:    
+        df_movingPeak = odm.calculatePeakDisplacements(df.intensityProfile, movingPeakFitSettings, factor=100,maxfev=20000)
     
     df_movingPeak.rename(columns = lambda columnName: columnName + "_mp",inplace=True)
     df = df.join(df_movingPeak)
     
     if (referencePeakFitSettings is not None):
-        df_referencePeak = odm.calculatePeakDisplacements(df.intensityProfile, referencePeakFitSettings, factor=100,maxfev=20000)
+        print "fitting reference peak..."
+        if (fitCyclesSeparately):
+            referencePeakDataFrames = []
+            for cycleNumber,group in df.groupby('cycleNumber'):
+                print "Cycle %i" % cycleNumber
+                df_referencePeak = odm.calculatePeakDisplacements(group.intensityProfile, referencePeakFitSettings, updateInitialParameters=False, factor=100,maxfev=20000)
+                referencePeakDataFrames.append(df_referencePeak)
+            df_referencePeak = _pd.concat(referencePeakDataFrames)
+        else:
+            df_referencePeak = odm.calculatePeakDisplacements(df.intensityProfile, referencePeakFitSettings, factor=100,maxfev=20000)
+                
         df_referencePeak.rename(columns = lambda columnName: columnName + "_ref",inplace=True)
         df = df.join(df_referencePeak)
         df['displacement'] = df.displacement_mp - df.displacement_ref
@@ -146,7 +170,7 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
     
     print "ALL DONE"
     
-    return df,movingPeakFitSettings,referencePeakFitSettings,measurementName
+    return df,settings,movingPeakFitSettings,referencePeakFitSettings,measurementName
 
 ##main script##
 def main():
@@ -158,6 +182,7 @@ def main():
     		help="an odmSettings.ini file to get the settings from")
     parser.add_argument("--fitfunction-params-file",dest="fitfunction_params_file",type=str,default=None,
     		help="a json file with the fitfunction parameters to use")
+    
     args = parser.parse_args()
 
     if (not args.datafile is None and os.path.exists(args.datafile) and os.path.isfile(args.datafile)):
@@ -175,7 +200,7 @@ def main():
     else:
         ffSettingsFile = None
 
-    df,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(datafile,settingsFile=odmSettingsFile,fitSettingsFile=ffSettingsFile)
+    df,settings,movingPeakFitSettings,referencePeakFitSettings,measurementName = fitRawODMData(datafile,settingsFile=odmSettingsFile,fitSettingsFile=ffSettingsFile)
     
     
 if __name__ == "__main__":

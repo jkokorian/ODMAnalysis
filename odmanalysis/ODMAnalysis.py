@@ -80,6 +80,11 @@ def removeIncompleteCycles(df,inplace=True):
     if (df.cycleNumber[-1] != df.cycleNumber[-2]):
         df.drop(df.tail(1).index,inplace=inplace)
 
+
+def normalizeIntensityProfiles(df):
+    df.intensityProfile = df.intensityProfile.map(lambda ip: (ip - ip.min())/(ip.max()-ip.min()))
+    
+
 def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     """
     Reads a data.csv file that has been written by a LabVIEW ODM Measurement and returns
@@ -116,6 +121,7 @@ def readODMData(dataFilePath,progressReporter=_StdOutProgressReporter()):
     df = _pd.concat(chunks)
     
     df = df[df.intensityProfile.map(len) != 0]
+    normalizeIntensityProfiles(df)    
     
     getActuationDirectionAndCycle(df)
 
@@ -381,7 +387,7 @@ class CurveFitResult(object):
 
 
 
-def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressReporter = None, pInitial = None, **curveFitKwargs):
+def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressReporter = None, pInitial = None, updateInitialParameters=True, **curveFitKwargs):
     """
     Fits an ODM FitFunction to the target Series of intensity profiles.
     
@@ -432,7 +438,7 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
                   xdata = xdata,\
                   ydata = ydata,\
                   p0 = p0,**curveFitKwargs)
-         p0 = popt
+         p0 = popt if updateInitialParameters else p0
         
          curveFitResult = CurveFitResult()         
 
@@ -440,7 +446,7 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
          curveFitResult.pcov = pcov         
          curveFitResult.chisquare = _chisquare(ydata,fitFunction(xdata,*popt))[0]
          
-         df.curveFitResult[i] = curveFitResult         
+         df.curveFitResult[i] = curveFitResult     
          df.displacement[i] = fitFunction.getDisplacement(*popt)         
          df.chiSquare[i] = curveFitResult.chisquare
          
