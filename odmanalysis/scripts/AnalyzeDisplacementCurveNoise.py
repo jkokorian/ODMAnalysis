@@ -56,7 +56,7 @@ def main():
     coordinateGrabber.promptMessages = ["Select lower limit...","Select upper limit..."]
     coordinates = coordinateGrabber.getValuesFromUser()
     
-    xLimits = [c[0] for c in coordinates]
+    xLimits = [int(c[0]) for c in coordinates]
     
     dfs = df.iloc[slice(*xLimits)]
     
