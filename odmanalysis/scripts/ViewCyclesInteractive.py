@@ -93,8 +93,12 @@ def main():
     commonPath = _os.path.abspath(_os.path.split(filename)[0])
     measurementName = _os.path.split(_os.path.split(filename)[0])[1]
     
-        
+    
+    print "loading settings from " + commonPath + "/odmSettings.ini"
+    settings = _odm.CurveFitSettings.loadFromFile(commonPath+"/odmSettings.ini")
     df = _odm.readAnalysisData(filename)
+    df['displacement_nm'] = df.displacement * settings.pxToNm      
+    
     
     app = qt.QApplication(_sys.argv)
     cycleViewer = InteractiveCycleViewer(df)
