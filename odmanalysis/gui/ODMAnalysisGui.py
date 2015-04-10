@@ -42,6 +42,20 @@ def get_path(wildcard,defaultFile=""):
     app.Exit()
     app.Destroy()
     return path
+    
+def get_dir_path():
+    app = wx.App(None)
+    style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+    dialog = wx.DirDialog(None, style=style,defaultPath="")
+    if dialog.ShowModal() == wx.ID_OK:
+        path = dialog.GetPath()
+    else:
+        path = None
+    dialog.Destroy()
+    app.MainLoop()
+    app.Exit()
+    app.Destroy()
+    return path
 
 class Cursor:
     def __init__(self, ax):
