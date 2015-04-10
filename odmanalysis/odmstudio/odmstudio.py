@@ -79,30 +79,45 @@ class CsvReaderWidget(SourceReaderWidget):
         
        
         
-class Tracker(q.QObject):
+class FeatureTracker(q.QObject):
     def __init__(self):
         q.QObject.__init__(self)
-    
+        
+        
     def findPosition(self,intensityProfile):
         raise NotImplemented("Implement this method in child class")
         
     
-class CurveFitTracker(Tracker):
+        
+    
+class CurveFitTracker(FeatureTracker):
     def __init__(self):
-        Tracker.__init__(self)
+        FeatureTracker.__init__(self)
         self.fitFunction = None     
         
         
     def findPosition(self,intensityProfile):
-        pass
-        
+        #TODO: implement        
+        return 0
+
+
 class TrackableFeature(q.QObject):
-    def __init__(self,name,lowerLimit,upperLimit):
+    def __init__(self,name):
         super(TrackableFeature,self).__init__()
         
         self.name = name
-        self.slice = slice(lowerLimit,upperLimit)
-        self.tracker = None
+        self.lowerLimit = 0        
+        self.upperLimit = 0        
+        self._tracker = FeatureTracker()
+        
+    @property
+    def tracker(self):
+        return self._tracker
+    
+    def setTracker(self,tracker):
+        self._tracker = tracker
+    
+    
     
     def findPosition(self, data):
         """
@@ -113,7 +128,36 @@ class TrackableFeature(q.QObject):
 
 
         
+class TrackableFeatureWidget(qt.QWidget):
+    """
+    Form for defining a trackable feature
+    """
+    def __init__(self,trackableFeature,parent=None):
+        qt.QWidget.__init__(self,parent)
+        self.trackableFeature = trackableFeature
         
+    
+class IntensityProfilePlotWidget(qt.QWidget):
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+
+
+class DisplacementPlotWidget(qt.QWidget):
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+        
+
+class InteractiveTrackingWidget(qt.QWidget):
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+        self.displacementPlot = DisplacementPlotWidget(self)
+        self.intensityProfilePlot = IntensityProfilePlotWidget(self)
+
+        movingFeature = TrackableFeature("moving feature")
+        referenceFeature = TrackableFeature("reference feature")        
+        
+        self.movingFeatureWidget = TrackableFeatureWidget(movingFeature,parent=self)
+        self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature,parent=self)
         
         
         
