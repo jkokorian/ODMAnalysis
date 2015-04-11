@@ -5,9 +5,6 @@ import numpy as np
 import odmanalysis as odm
 
 
-
-
-
 class SourceReader(q.QObject):
     
     dataChanged = q.pyqtSignal(pd.DataFrame)
@@ -23,7 +20,7 @@ class SourceReader(q.QObject):
 class CsvReader(SourceReader):
     
     statusMessageChanged = q.pyqtSignal(str)
-    
+
     def __init__(self):
         SourceReader.__init__(self)
         self._statusMessage = ""
@@ -39,42 +36,35 @@ class CsvReader(SourceReader):
 
 
     def loadDataFromFile(self,filename):
+        self.data = None
         self.status = "busy"
-        reader = odm.getODMDataReader(filename)
+        reader = odm.getODMDataReader(filename,chunksize=500)
         
         chunks = []
         for chunk in reader:
-            chunks.append(chunk)
+            self.appendChunkToData(chunk)
         
-        df = pd.concat(chunks)
-        self.data = df
+
+    def appendChunkToData(self,chunk):
+        if self.data is None:
+            self.data = chunk
+        else:
+            self.data = pd.concat([self.data,chunk])
+        
         self._emitDataChanged()
         
-        
-class SourceReaderWidget(qt.QWidget):
-    def __init__(self,parent=None):
-        super(SourceReaderWidget,self).__init__(parent)
-    
-class CsvReaderWidget(SourceReaderWidget):
-    def __init__(self,parent=None):
-        SourceReaderWidget.__init__(self,parent)
-        
-        self.csvReader = CsvReader()
-        
-        #create ui components
-        
-        layout = qt.QVBoxLayout()
-        self.browseButton = qt.QPushButton("Browse...",parent=self)
-        self.statusMessageLabel = qt.QLabel("",parent=self)
-        layout.addWidget(self.browseButton)
-        layout.addWidget(self.statusMessageLabel)
-        
-        self.setLayout(layout)
+    def loadDataFromFileAsync(self,filename):
+        that = self
+        class DataLoaderThread(q.QThread):
+            def run(self):
+                that.loadDataFromFile(filename)
 
-        
-        #connect signals and slots
-        
-        self.csvReader.statusMessageChanged.connect(self.statusMessageLabel.setText)
+
+        thread = DataLoaderThread()
+        thread.start()
+        return thread
+
+          
         
         
        
@@ -124,44 +114,11 @@ class TrackableFeature(q.QObject):
         Searches the data within the limits for the feature using the tracker
         """
         self.tracker.findPosition(data[self.slice])
+
         
 
 
         
-class TrackableFeatureWidget(qt.QWidget):
-    """
-    Form for defining a trackable feature
-    """
-    def __init__(self,trackableFeature,parent=None):
-        qt.QWidget.__init__(self,parent)
-        self.trackableFeature = trackableFeature
-        
-    
-class IntensityProfilePlotWidget(qt.QWidget):
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
 
-
-class DisplacementPlotWidget(qt.QWidget):
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
-        
-
-class InteractiveTrackingWidget(qt.QWidget):
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
-        self.displacementPlot = DisplacementPlotWidget(self)
-        self.intensityProfilePlot = IntensityProfilePlotWidget(self)
-
-        movingFeature = TrackableFeature("moving feature")
-        referenceFeature = TrackableFeature("reference feature")        
-        
-        self.movingFeatureWidget = TrackableFeatureWidget(movingFeature,parent=self)
-        self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature,parent=self)
-        
-        
-        
-        
-        
         
     
