@@ -1,10 +1,53 @@
 from PyQt4 import QtCore as q
 from PyQt4 import QtGui as qt
 import pyqtgraph as pg
+import pyqtgraph.dockarea as dock
 import odmstudio_lib as lib
 import pandas as pd
 import numpy as np
 import os
+
+
+
+
+class WidgetFactory(object):
+    
+    __dict = {}
+    
+    @classmethod
+    def registerWidget(cls,widgetClass,anyClass):
+        cls.__dict[anyClass] = widgetClass
+
+    @classmethod
+    def getWidgetFor(cls,anyClass):
+        if cls.__dict.has_key(anyClass):
+            return cls.__dict[anyClass]
+        else:
+            return qt.QWidget
+
+def __registerWidgets():
+    WidgetFactory.registerWidget(CurveFitTrackerWidget,lib.CurveFitTracker)
+    WidgetFactory.registerWidget(FFTPhaseShiftTrackerWidget,lib.FFTPhaseShiftTracker)
+
+
+class PlotController(q.QObject):
+    """
+    Base class for anything that can control a pyqtgraph plot
+    """
+
+    def __init__(self,parent=None):
+        q.QObject.__init__(self,parent=None)
+        self.plotWidget = None
+
+    def connectToPlotWidget(self,plotWidget):
+        if (self.plotWidget is not None):
+            self.disconnectPlotWidget()
+        self.plotWidget = plotWidget
+
+    
+    def disconnectPlotWidget(self):
+        raise NotImplemented("Override this method to make sure that all signals are disconnected")
+
 
 class SourceReaderWidget(qt.QWidget):
     def __init__(self,parent=None):
@@ -60,16 +103,128 @@ class CsvReaderWidget(SourceReaderWidget):
         
 
 
-class TrackableFeatureWidget(qt.QWidget):
+class TrackableFeatureWidget(qt.QWidget,PlotController):
     """
     Form for defining a trackable feature
     """
     def __init__(self,trackableFeature,parent=None):
         qt.QWidget.__init__(self,parent)
-        self.trackableFeature = trackableFeature
+        PlotController.__init__(self,parent)
+        self._trackableFeature = trackableFeature
+        self._canDisable = True
+        self._featureTrackerIsEnabled = True
+        
+        layout = qt.QVBoxLayout()
+        
+        self.featureEnabledCheckBox = qt.QCheckBox("Enable")
+        self.featureEnabledCheckBox.setChecked(True)
+        layout.addWidget(self.featureEnabledCheckBox)
+
+        self.lowerLimitSpinBox = qt.QSpinBox()
+        layout.addWidget(self.lowerLimitSpinBox)
+
+        self.trackerComboBox = qt.QComboBox()
+        layout.addWidget(self.trackerComboBox)
+
+        self.featureTrackerWidgetContainer = qt.QGridLayout()
+        self.featureTrackerWidget = None
+        self.availableFeatureTrackers = lib.FeatureTracker.getRegisteredFeatureTrackers()
+        
+        for tracker in self.availableFeatureTrackers:
+            self.trackerComboBox.addItem(tracker.getDisplayName())
+        
+        self.updateFeatureTrackerWidget()
+
+        layout.addLayout(self.featureTrackerWidgetContainer)
+        self.setLayout(layout)
+        
+
+        #connect signals and slots
+        self.featureEnabledCheckBox.stateChanged.connect(self.setFeatureTrackerEnabled)
+        self.trackerComboBox.currentIndexChanged.connect(self.updateFeatureTrackerWidget)
+        
+
+    def connectToPlotWidget(self, plotWidget):
+        super(TrackableFeatureWidget, self).connectToPlotWidget(plotWidget)
+        plotitem = self.plotWidget.getPlotItem()
+        self.createPlotRegion()
+        return super(TrackableFeatureWidget, self).connectToPlotWidget(plotWidget)
+
+    
+    def createPlotRegion(self):
+        self.region = pg.LinearRegionItem(brush=pg.intColor(1,alpha=100))
+        self.region.setZValue(10)
+        self.regionLabel = pg.TextItem("moving peak",color=pg.intColor(1),
+                                                 anchor=(0,1))
+        self.regionLabel.setX(self.region.getRegion()[0])
+        self.plotWidget.addItem(self.regionLabel)                
+        self.plotWidget.addItem(self.region, ignoreBounds=True)
+        self.region.sigRegionChanged.connect(self.handleRegionChanged)
+
+    def disconnectPlotWidget(self):
+        self.region.sigRegionChanged.disconnect(self.handleRegionChanged)
+        
+
+    def handleRegionChanged(self, r):
+        self.regionLabel.setX(r.getRegion()[0])
+
+    def updateFeatureTrackerWidget(self):
+        if (self.featureTrackerWidget is not None):
+            self.featureTrackerWidgetContainer.removeWidget(self.featureTrackerWidget)
+            self.featureTrackerWidget.disconnectPlotWidget()
+            self.featureTrackerWidget.setParent(None)
+
+        self.featureTracker = self.availableFeatureTrackers[self.trackerComboBox.currentIndex()]
+        self.featureTrackerWidget = WidgetFactory.getWidgetFor(self.featureTracker)(parent=self)
+        if (self.featureTrackerWidget is PlotController):
+            self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
+        self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
+        
+
+    def setCanDisable(self,canDisable):
+        """
+        Sets whether or not the "enable" checkbox should be shown on this widget.
+        """
+        self._canDisable = (canDisable == True)
+        
+    def getCanDisable(self):
+        return self._canDisable
+
+    def setFeatureTrackerEnabled(self,enabled):
+        self._featureTrackerIsEnabled = (enabled == True)
+
 
         
-        
+
+class CurveFitTrackerWidget(qt.QWidget,PlotController):
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+        PlotController.__init__(self,parent)
+        layout = qt.QVBoxLayout()
+        self.groupbox = qt.QGroupBox("Curve-fit settings")
+        layout.addWidget(self.groupbox)
+        self.setLayout(layout)
+
+    def connectToPlotWidget(self, plotWidget):
+        return super(CurveFitTrackerWidget, self).connectToPlotWidget(plotWidget)
+
+    def disconnectPlotWidget(self):
+        pass
+
+class FFTPhaseShiftTrackerWidget(qt.QWidget,PlotController):
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+        PlotController.__init__(self,parent)
+        layout = qt.QVBoxLayout()
+        self.groupbox = qt.QGroupBox("FFT phase-shift settings")
+        layout.addWidget(self.groupbox)
+        self.setLayout(layout)
+
+    def connectToPlotWidget(self, plotWidget):
+        return super(CurveFitTrackerWidget, self).connectToPlotWidget(plotWidget)
+
+    def disconnectPlotWidget(self):
+        pass
     
 class IntensityProfilePlotWidget(qt.QWidget):
     
@@ -173,14 +328,21 @@ class DisplacementPlotWidget(qt.QWidget):
         self.setLayout(layout)
         
 
-class InteractiveTrackingWidget(qt.QWidget):
+class ODMStudioMainWindow(qt.QMainWindow):
 
     fileDropped = q.pyqtSignal(str)
 
     def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
+        qt.QMainWindow.__init__(self,parent)
         
+        self.setWindowTitle("ODM Studio")
+        self.resize(800,600)
         self.setAcceptDrops(True)
+
+        area=dock.DockArea()
+        self.dockArea = area
+        self.setCentralWidget(area)
+
 
         self.displacementPlot = DisplacementPlotWidget(self)
         self.sourceReaderWidget = CsvReaderWidget(self)
@@ -191,23 +353,27 @@ class InteractiveTrackingWidget(qt.QWidget):
         
         self.movingFeatureWidget = TrackableFeatureWidget(movingFeature,parent=self)
         self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature,parent=self)
-        
+        self.movingFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
+        self.referenceFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
 
-        lvLayout = qt.QVBoxLayout()
-        lvLayout.addWidget(self.sourceReaderWidget)
-        lvLayout.addWidget(self.intensityProfilePlot)
-        lvLayout.addWidget(self.displacementPlot)
         
-        rvLayout = qt.QHBoxLayout()
-        rvLayout.addWidget(self.movingFeatureWidget)
-        rvLayout.addWidget(self.referenceFeatureWidget)
-
-
-        hLayout = qt.QHBoxLayout()
-        hLayout.addLayout(lvLayout)
-        hLayout.addLayout(rvLayout)
+        sourceReaderDock = dock.Dock("Source Reader", size=(200,400))
+        area.addDock(sourceReaderDock, 'left')      ## place d1 at left edge of dock area (it will fill the whole space since there are no other docks yet)
+        sourceReaderDock.addWidget(self.sourceReaderWidget)
         
-        self.setLayout(hLayout)
+        intensityProfileDock = dock.Dock("Intensity Profiles", size=(500, 500))     ## give this dock the minimum possible size
+        area.addDock(intensityProfileDock, 'right', sourceReaderDock)     ## place d2 at right edge of dock area
+        intensityProfileDock.addWidget(self.intensityProfilePlot)
+        
+        displacementGraphDock = dock.Dock("Displacement Graph", size=(500,500))
+        area.addDock(displacementGraphDock, 'bottom', intensityProfileDock)## place d3 at bottom edge of d1
+        displacementGraphDock.addWidget(self.displacementPlot)
+        
+        featureTrackersDock = dock.Dock("Feature Trackers", size=(100,400))
+        area.addDock(featureTrackersDock, 'right', intensityProfileDock)
+        featureTrackersDock.addWidget(self.movingFeatureWidget)
+        featureTrackersDock.addWidget(self.referenceFeatureWidget)
+
 
 
         #connect signals and slots

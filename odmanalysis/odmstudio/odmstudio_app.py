@@ -3,13 +3,13 @@ from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
 import odmstudio_gui as gui
 
-
+gui.__registerWidgets()
 #QtGui.QApplication.setGraphicsSystem('raster')
 app = QtGui.QApplication([])
 #mw = QtGui.QMainWindow()
 #mw.resize(800,800)
 
-w = gui.InteractiveTrackingWidget()
+w = gui.ODMStudioMainWindow()
 w.show()
 
 

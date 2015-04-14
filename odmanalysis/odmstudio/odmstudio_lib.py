@@ -66,10 +66,25 @@ class CsvReader(SourceReader):
 
           
         
-        
-       
-        
+      
+
 class FeatureTracker(q.QObject):
+
+    __featureTrackers = []
+
+    @classmethod
+    def register(cls,childClass):
+        cls.__featureTrackers.append(childClass)
+        return childClass
+
+    @classmethod
+    def getRegisteredFeatureTrackers(cls):
+        return [ft for ft in cls.__featureTrackers]
+
+    @classmethod
+    def getDisplayName(cls):
+        return str(cls)
+
     def __init__(self):
         q.QObject.__init__(self)
         
@@ -78,9 +93,14 @@ class FeatureTracker(q.QObject):
         raise NotImplemented("Implement this method in child class")
         
     
-        
-    
+
+@FeatureTracker.register
 class CurveFitTracker(FeatureTracker):
+
+    @classmethod
+    def getDisplayName(cls):
+        return "Curve-fit"
+
     def __init__(self):
         FeatureTracker.__init__(self)
         self.fitFunction = None     
@@ -89,6 +109,23 @@ class CurveFitTracker(FeatureTracker):
     def findPosition(self,intensityProfile):
         #TODO: implement        
         return 0
+
+@FeatureTracker.register
+class FFTPhaseShiftTracker(FeatureTracker):
+    
+    @classmethod
+    def getDisplayName(cls):
+        return "FFT phase shift"
+    
+    def __init__(self):
+        FeatureTracker.__init__(self)
+        
+    def findPosition(self, intensityProfile):
+        """
+        TODO: implement
+        """
+        return super(FFTTracker, self).findPosition(intensityProfile)
+
 
 
 class TrackableFeature(q.QObject):
@@ -115,6 +152,11 @@ class TrackableFeature(q.QObject):
         """
         self.tracker.findPosition(data[self.slice])
 
+    def setLowerLimit(self,value):
+        self.lowerLimit = value
+
+    def setUpperLimit(self,value):
+        self.upperLimit = value
         
 
 
