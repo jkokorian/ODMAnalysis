@@ -46,7 +46,7 @@ class PlotController(q.QObject):
 
     
     def disconnectPlotWidget(self):
-        raise NotImplemented("Override this method to make sure that all signals are disconnected")
+        self.plotWidget = None
 
 
 class SourceReaderWidget(qt.QWidget):
@@ -120,8 +120,12 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.featureEnabledCheckBox.setChecked(True)
         layout.addWidget(self.featureEnabledCheckBox)
 
+        hLayout = qt.QHBoxLayout()
         self.lowerLimitSpinBox = qt.QSpinBox()
-        layout.addWidget(self.lowerLimitSpinBox)
+        self.upperLimitSpinBox = qt.QSpinBox()
+        hLayout.addWidget(self.lowerLimitSpinBox)
+        hLayout.addWidget(self.upperLimitSpinBox)
+        layout.addLayout(hLayout)
 
         self.trackerComboBox = qt.QComboBox()
         layout.addWidget(self.trackerComboBox)
@@ -148,13 +152,12 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         super(TrackableFeatureWidget, self).connectToPlotWidget(plotWidget)
         plotitem = self.plotWidget.getPlotItem()
         self.createPlotRegion()
-        return super(TrackableFeatureWidget, self).connectToPlotWidget(plotWidget)
 
     
     def createPlotRegion(self):
         self.region = pg.LinearRegionItem(brush=pg.intColor(1,alpha=100))
         self.region.setZValue(10)
-        self.regionLabel = pg.TextItem("moving peak",color=pg.intColor(1),
+        self.regionLabel = pg.TextItem(self._trackableFeature.name,color=pg.intColor(1),
                                                  anchor=(0,1))
         self.regionLabel.setX(self.region.getRegion()[0])
         self.plotWidget.addItem(self.regionLabel)                
@@ -163,10 +166,16 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
 
     def disconnectPlotWidget(self):
         self.region.sigRegionChanged.disconnect(self.handleRegionChanged)
+        return super(TrackableFeatureWidget, self).disconnectPlotWidget()
+
+
+    
         
 
     def handleRegionChanged(self, r):
         self.regionLabel.setX(r.getRegion()[0])
+        self.lowerLimitSpinBox.setValue(r.getRegion()[0])
+        self.upperLimitSpinBox.setValue(r.getRegion()[1])
 
     def updateFeatureTrackerWidget(self):
         if (self.featureTrackerWidget is not None):
