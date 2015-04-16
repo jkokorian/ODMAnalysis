@@ -107,13 +107,17 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
     """
     Form for defining a trackable feature
     """
+
+    sourceDataChanged = q.pyqtSignal(pd.DataFrame)
+
     def __init__(self,trackableFeature,parent=None):
         qt.QWidget.__init__(self,parent)
         PlotController.__init__(self,parent)
         self._trackableFeature = trackableFeature
         self._canDisable = True
         self._featureTrackerIsEnabled = True
-        
+        self._sourceData = None
+
         layout = qt.QVBoxLayout()
         
         self.featureEnabledCheckBox = qt.QCheckBox("Enable")
@@ -162,17 +166,14 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.regionLabel.setX(self.region.getRegion()[0])
         self.plotWidget.addItem(self.regionLabel)                
         self.plotWidget.addItem(self.region, ignoreBounds=True)
-        self.region.sigRegionChanged.connect(self.handleRegionChanged)
+        self.region.sigRegionChanged.connect(self.region_RegionChanged)
 
     def disconnectPlotWidget(self):
-        self.region.sigRegionChanged.disconnect(self.handleRegionChanged)
+        self.region.sigRegionChanged.disconnect(self.region_RegionChanged)
         return super(TrackableFeatureWidget, self).disconnectPlotWidget()
-
-
-    
         
 
-    def handleRegionChanged(self, r):
+    def region_RegionChanged(self, r):
         self.regionLabel.setX(r.getRegion()[0])
         self.lowerLimitSpinBox.setValue(r.getRegion()[0])
         self.upperLimitSpinBox.setValue(r.getRegion()[1])
@@ -203,22 +204,43 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self._featureTrackerIsEnabled = (enabled == True)
 
 
+    def setSourceData(self,dataframe):
+        self._sourceData = dataframe
+        self.updateFormElements()
         
+        
+    def getSourceData(self):
+        return self._sourceData
+
+    def updateFormElements(self):
+        if (self._sourceData is not None):
+            xMaximum = len(self._sourceData.intensityProfile.iloc[0])
+            self.lowerLimitSpinBox.setMaximum(xMaximum)
+            self.upperLimitSpinBox.setMaximum(xMaximum)
+
 
 class CurveFitTrackerWidget(qt.QWidget,PlotController):
+
+
     def __init__(self,parent=None):
         qt.QWidget.__init__(self,parent)
         PlotController.__init__(self,parent)
+        
+        self._sourceIntensityProfiles = None
+        
         layout = qt.QVBoxLayout()
         self.groupbox = qt.QGroupBox("Curve-fit settings")
         layout.addWidget(self.groupbox)
         self.setLayout(layout)
+        
 
     def connectToPlotWidget(self, plotWidget):
         return super(CurveFitTrackerWidget, self).connectToPlotWidget(plotWidget)
 
     def disconnectPlotWidget(self):
         pass
+
+    
 
 class FFTPhaseShiftTrackerWidget(qt.QWidget,PlotController):
     def __init__(self,parent=None):
@@ -234,9 +256,15 @@ class FFTPhaseShiftTrackerWidget(qt.QWidget,PlotController):
 
     def disconnectPlotWidget(self):
         pass
-    
+
+
+class TrackableFeatureControlWidget(qt.QWidget,PlotController):
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+        PlotController.__init__(self,parent)
+
+
 class IntensityProfilePlotWidget(qt.QWidget):
-    
 
     def __init__(self,parent=None):        
         qt.QWidget.__init__(self,parent)
@@ -311,7 +339,7 @@ class IntensityProfilePlotWidget(qt.QWidget):
         
         pw.setAutoVisible(y=True)
     
-    def setData(self,dataframe):
+    def setSourceData(self,dataframe):
         """
         Set the data source for plotting.
         """
@@ -386,10 +414,11 @@ class ODMStudioMainWindow(qt.QMainWindow):
 
 
         #connect signals and slots
-        
-        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.intensityProfilePlot.setData)
         self.fileDropped.connect(self.sourceReaderWidget.handleDroppedFile)
-
+        
+        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.intensityProfilePlot.setSourceData)
+        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.movingFeatureWidget.setSourceData)
+        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.referenceFeatureWidget.setSourceData)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():

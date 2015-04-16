@@ -88,7 +88,7 @@ class FeatureTracker(q.QObject):
     def __init__(self):
         q.QObject.__init__(self)
         
-        
+    
     def findPosition(self,intensityProfile):
         raise NotImplemented("Implement this method in child class")
         
