@@ -104,7 +104,49 @@ class CsvReaderWidget(SourceReaderWidget):
 
     def readFileAsync(self,fileName):
         self.readerThread = self._sourceReader.loadDataFromFileAsync(str(fileName))
+       
         
+         
+class FeatureTrackerControlsWidget(qt.QWidget):
+
+    featureTrackerChanged = q.pyqtSignal(lib.FeatureTracker)
+
+    def __init__(self,parent=None,featureTracker=None):
+        qt.QWidget.__init__(self,parent)
+
+        self._featureTracker = featureTracker
+
+        layout = qt.QHBoxLayout()
+        
+
+        self.initializeAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_BrowserReload),"Initialize",self)
+        self.findInCurrentProfileAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaPlay),"Find in current profile",self)
+        self.findInAllProfilesAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaSeekForward),"Find in all profiles",self)
+
+        self.initializeButton = qt.QToolButton(self)
+        self.initializeButton.setDefaultAction(self.initializeAction)
+        self.findInCurrentProfileButton = qt.QToolButton(self)
+        self.findInCurrentProfileButton.setDefaultAction(self.findInCurrentProfileAction)
+        self.findInAllProfilesButton = qt.QToolButton(self)
+        self.findInAllProfilesButton.setDefaultAction(self.findInAllProfilesAction)
+        
+
+        
+        layout.addStretch()
+        layout.addWidget(self.initializeButton)
+        layout.addWidget(self.findInCurrentProfileButton)
+        layout.addWidget(self.findInAllProfilesButton)
+        
+        self.setLayout(layout)
+        
+
+    def setFeatureTracker(self,featureTracker):
+        self._featureTracker = featureTracker
+        self.featureTrackerChanged.emit(featureTracker)
+
+    def getFeatureTracker(self):
+        return self._featureTracker
+
 
 
 class TrackableFeatureWidget(qt.QWidget,PlotController):
@@ -144,16 +186,20 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         
         for tracker in self.availableFeatureTrackers:
             self.trackerComboBox.addItem(tracker.getDisplayName())
+                
+
+        layout.addLayout(self.featureTrackerWidgetContainer)
+        
+        self.featureTrackerControlsWidget = FeatureTrackerControlsWidget(self)
+        layout.addWidget(self.featureTrackerControlsWidget)
+        self.setLayout(layout)
+        
         
         self.updateFeatureTrackerWidget()
 
-        layout.addLayout(self.featureTrackerWidgetContainer)
-        self.setLayout(layout)
-        
-
         #connect signals and slots
         self.featureEnabledCheckBox.stateChanged.connect(self.setFeatureTrackerEnabled)
-        self.trackerComboBox.currentIndexChanged.connect(self.updateFeatureTrackerWidget)
+        self.trackerComboBox.currentIndexChanged.connect(self.handleFeatureTrackerSelected)
         
 
     def connectToPlotWidget(self, plotWidget):
@@ -194,6 +240,9 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
         self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
         
+    def handleFeatureTrackerSelected(self):
+        self.featureTrackerControlsWidget.setFeatureTracker(self.featureTracker)
+        self.updateFeatureTrackerWidget()
 
     def setCanDisable(self,canDisable):
         """
