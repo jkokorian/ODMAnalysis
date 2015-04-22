@@ -8,6 +8,8 @@ import odmanalysis as odm
 class SourceReader(q.QObject):
     
     dataChanged = q.pyqtSignal(pd.DataFrame)
+    sourceChanged = q.pyqtSignal(str)
+
     
     def __init__(self):
         super(SourceReader,self).__init__()
@@ -20,10 +22,13 @@ class SourceReader(q.QObject):
 class CsvReader(SourceReader):
     
     statusMessageChanged = q.pyqtSignal(str)
+    progressChanged = q.pyqtSignal(int)
 
     def __init__(self):
         SourceReader.__init__(self)
-        self._statusMessage = ""
+        self._statusMessage = "idle"
+        self._progress = None
+        self._currentFile = None
         
     @property
     def statusMessage(self):
@@ -34,15 +39,31 @@ class CsvReader(SourceReader):
         self._statusMessage = message
         self.statusMessageChanged.emit(message)
 
+    @property
+    def progress(self):
+        return self._progress
+
+    def _setProgress(self,progress):
+        self._progress = progress
+        self.progressChanged.emit(progress)
+
 
     def loadDataFromFile(self,filename):
         self.data = None
-        self.status = "busy"
+        self._setStatusMessage("reading...")
         reader = odm.getODMDataReader(filename,chunksize=500)
         
+        lineCount = float(sum(1 for line in open(filename)))
         chunks = []
+        linesRead = 1
         for chunk in reader:
+            linesRead += 500
             self.appendChunkToData(chunk)
+            self._setStatusMessage("%i lines read" % linesRead)
+            self._setProgress(linesRead/lineCount * 100)
+
+        self._setStatusMessage("File loaded")
+        self._setProgress(100)
         
 
     def appendChunkToData(self,chunk):
@@ -53,19 +74,26 @@ class CsvReader(SourceReader):
         
         self._emitDataChanged()
         
-    def loadDataFromFileAsync(self,filename):
+    def loadDataFromFileAsync(self,fileName):
+        self._setCurrentFile(fileName)
         that = self
         class DataLoaderThread(q.QThread):
             def run(self):
-                that.loadDataFromFile(filename)
+                that.loadDataFromFile(fileName)
 
 
         thread = DataLoaderThread()
         thread.start()
         return thread
 
-          
-        
+    @property
+    def currentFile(self):
+        return self._currentFile
+
+    def _setCurrentFile(self,fileName):
+        self._currentFile = fileName
+        self.sourceChanged.emit(fileName)   
+       
       
 
 class FeatureTracker(q.QObject):

@@ -50,6 +50,8 @@ class PlotController(q.QObject):
 
 
 class SourceReaderWidget(qt.QWidget):
+    
+    
     def __init__(self,parent=None):
         super(SourceReaderWidget,self).__init__(parent)
         
@@ -60,32 +62,36 @@ class SourceReaderWidget(qt.QWidget):
 
     def handleDroppedFile(self,path):
         pass
+
+    
     
 class CsvReaderWidget(SourceReaderWidget):
     def __init__(self, parent=None):
         SourceReaderWidget.__init__(self,parent)
         
         self._sourceReader = lib.CsvReader()
-        self.currentFile = ""
+        
         self.readerThread = None
 
         #create ui components
         
         layout = qt.QVBoxLayout()
         self.browseButton = qt.QPushButton("Browse...",parent=self)
-        self.currentFileLabel = qt.QLabel("No file open",parent=self)
         self.statusMessageLabel = qt.QLabel("",parent=self)
+        self.progressBar = qt.QProgressBar()
         layout.addWidget(self.browseButton)
         layout.addWidget(self.statusMessageLabel)
-        layout.addWidget(self.currentFileLabel)
-        
+        layout.addWidget(self.progressBar)
+        layout.addStretch()
         self.setLayout(layout)
 
         
         #connect signals and slots
         
         self._sourceReader.statusMessageChanged.connect(self.statusMessageLabel.setText)
+        self._sourceReader.progressChanged.connect(self.progressBar.setValue)
         self.browseButton.clicked.connect(self.showBrowseDialog)
+    
     
 
     def handleDroppedFile(self, path):
@@ -97,8 +103,6 @@ class CsvReaderWidget(SourceReaderWidget):
             self.readFileAsync(fileName)
 
     def readFileAsync(self,fileName):
-        self.currentFile = fileName
-        
         self.readerThread = self._sourceReader.loadDataFromFileAsync(str(fileName))
         
 
@@ -419,6 +423,7 @@ class ODMStudioMainWindow(qt.QMainWindow):
         self.sourceReaderWidget.sourceReader.dataChanged.connect(self.intensityProfilePlot.setSourceData)
         self.sourceReaderWidget.sourceReader.dataChanged.connect(self.movingFeatureWidget.setSourceData)
         self.sourceReaderWidget.sourceReader.dataChanged.connect(self.referenceFeatureWidget.setSourceData)
+        self.sourceReaderWidget.sourceReader.sourceChanged.connect(self.setWindowTitle)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -442,6 +447,8 @@ class ODMStudioMainWindow(qt.QMainWindow):
 
     def _emitFileDropped(self,path):
         self.fileDropped.emit(path)
+
+    
 
 def logToConsole(message):
     print message
