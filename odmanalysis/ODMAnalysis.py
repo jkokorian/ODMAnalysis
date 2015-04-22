@@ -29,6 +29,7 @@ import ConfigParser as _ConfigParser
 from ProgressReporting import StdOutProgressReporter as _StdOutProgressReporter
 import pickle as _pickle
 import copy as _copy
+import attrdict
 
 
 def ipStringToArray(ipString):    
@@ -410,10 +411,8 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
         progressReporter = _StdOutProgressReporter()
     
     fitFunction = peakFitSettings.fitFunction
-    df = _pd.DataFrame(index=intensityProfiles.index)
-    df['displacement'] = 0.0
-    df['curveFitResult'] = CurveFitResult()
-    df['chiSquare'] = 0.0
+    index=intensityProfiles.index
+    
     if pInitial is not None:        
         p0 = pInitial
     else:
@@ -425,27 +424,30 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
     xdata = _np.arange(len(intensityProfiles.iloc[0]))[xmin:xmax]
     
     progress = 0.0
-    total = len(df.index)
-    for i in range(len(df)):
+    total = len(index)
+    curveFitResults = total*[None]
+    for i in range(total):
          ydata = intensityProfiles.iloc[i][xmin:xmax]
          popt,pcov = _curve_fit(fitFunction,\
                   xdata = xdata,\
                   ydata = ydata,\
                   p0 = p0,**curveFitKwargs)
          p0 = popt
-        
-         curveFitResult = CurveFitResult()         
-
-         curveFitResult.popt = popt
-         curveFitResult.pcov = pcov         
-         curveFitResult.chisquare = _chisquare(ydata,fitFunction(xdata,*popt))[0]
          
-         df.curveFitResult[i] = curveFitResult         
-         df.displacement[i] = fitFunction.getDisplacement(*popt)         
-         df.chiSquare[i] = curveFitResult.chisquare
+         curveFitResult = {}       
+
+         curveFitResult['popt'] = popt
+         curveFitResult['pcov'] = pcov         
+         curveFitResult['chiSquare'] = _chisquare(ydata,fitFunction(xdata,*popt))[0]
+         curveFitResult['curveFitResult'] = attrdict.AttrDict(curveFitResult)
+         curveFitResult['displacement'] = fitFunction.getDisplacement(*popt)
+         
+         curveFitResults[i] = curveFitResult
          
          progress += 1
          progressReporter.progress(progress / total * 100)
+    
+    df = _pd.DataFrame(index=index,data=curveFitResults)
     
     progressReporter.done()
     
