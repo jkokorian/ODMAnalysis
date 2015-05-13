@@ -164,7 +164,7 @@ def getODMDataReader(dataFilePath,chunksize=2005,skipDataRows=0):
     
     return reader
 
-def readAnalysisData(dataFilePath,readSettings=True):
+def readAnalysisData(dataFilePath,readSettings=True,read_csv_kwargs=dict()):
     """
     Reads the csv-file that was produced by the FitRawODMData script back into a DataFrame. 
     
@@ -177,7 +177,8 @@ def readAnalysisData(dataFilePath,readSettings=True):
         If true, attempts to obtain the pixel-to-nanometer ratio from the 'odmSettings.ini'
         file in the same folder as the csv file. An extra column will be added to the 
         output dataframe, called 'displacement_nm'.
-        
+    read_csv_kwargs : dictionary
+        Additional keyword arguments to pass to pd.read_csv
     
     Returns
     -------
@@ -187,7 +188,7 @@ def readAnalysisData(dataFilePath,readSettings=True):
         set to 'timestamp'.
     """
 
-    df = _pd.read_csv(dataFilePath,index_col='timestamp',parse_dates='timestamp')
+    df = _pd.read_csv(dataFilePath,index_col='timestamp',parse_dates='timestamp',**read_csv_kwargs)
     
     commonpath = _os.path.split(dataFilePath)[0]
     try:

@@ -3,6 +3,36 @@ from PyQt4 import QtGui as qt
 import pandas as pd
 import numpy as np
 import odmanalysis as odm
+from functools import wraps
+
+
+
+
+
+class RegisterSourceReader(object):
+    
+    _sourceReaders = {}
+
+    @classmethod
+    def getSourceReaderForFileType(cls, fileType): 
+        return cls._sourceReaders[fileType]
+    
+    @classmethod
+    def hasSourceReaderForFileType(cls,fileType):
+        return cls._sourceReaders.has_key(fileType)
+
+    def __init__(self, fileType, maxNumberOfFiles=1):
+        self.fileType = fileType
+        self.maxNumberOfFiles = maxNumberOfFiles;
+
+    def __call__(self,cls):
+        self._sourceReader = cls
+        RegisterSourceReader._sourceReaders[self.fileType] = self
+        
+        return cls
+
+    def getNewSourceReader(self):
+        return self._sourceReader;
 
 
 class SourceReader(q.QObject):
@@ -14,11 +44,68 @@ class SourceReader(q.QObject):
     def __init__(self):
         super(SourceReader,self).__init__()
         self.data = None
+        self._currentPath = ""
         
     def _emitDataChanged(self):
         self.dataChanged.emit(self.data)
+
+    def read(self,path):
+        """
+        Read data from path synchronously.
+
+        Override this method to implement the logic for reading from the path. Make sure to call this super method before doing anything else.
+        """
+        
+        self.data = None
+        self._setCurrentPath(path)
+
         
 
+    @property
+    def currentPath(self):
+        return self._currentPath
+
+    def _setCurrentPath(self,path):
+        self._currentPath = path
+        self.sourceChanged.emit(path)   
+
+
+    def readAsync(self,path):
+        """
+        Read data from path asynchronously.
+
+        Returns
+        -------
+
+        A QThread object for the asynchronous reading operation
+        """
+        
+        
+        that = self
+        class DataLoaderThread(q.QThread):
+            def run(self):
+                that.read(path)
+
+
+        thread = DataLoaderThread()
+        thread.start()
+        
+        return thread
+
+
+@RegisterSourceReader(".avi")
+class VideoReader(SourceReader):
+
+    def __init__(self):
+        SourceReader.__init__(self)
+        pass
+
+    def read(self, path):
+        pass
+
+    
+
+@RegisterSourceReader(".csv")
 class CsvReader(SourceReader):
     
     statusMessageChanged = q.pyqtSignal(str)
@@ -48,12 +135,13 @@ class CsvReader(SourceReader):
         self.progressChanged.emit(progress)
 
 
-    def loadDataFromFile(self,filename):
-        self.data = None
-        self._setStatusMessage("reading...")
-        reader = odm.getODMDataReader(filename,chunksize=500)
+    def read(self,path):
+        super(CsvReader, self).read(path)
         
-        lineCount = float(sum(1 for line in open(filename)))
+        self._setStatusMessage("reading...")
+        reader = odm.getODMDataReader(path,chunksize=500)
+        
+        lineCount = float(sum(1 for line in open(path)))
         chunks = []
         linesRead = 1
         for chunk in reader:
@@ -74,27 +162,67 @@ class CsvReader(SourceReader):
         
         self._emitDataChanged()
         
-    def loadDataFromFileAsync(self,fileName):
-        self._setCurrentFile(fileName)
-        that = self
-        class DataLoaderThread(q.QThread):
-            def run(self):
-                that.loadDataFromFile(fileName)
-
-
-        thread = DataLoaderThread()
-        thread.start()
-        return thread
-
-    @property
-    def currentFile(self):
-        return self._currentFile
-
-    def _setCurrentFile(self,fileName):
-        self._currentFile = fileName
-        self.sourceChanged.emit(fileName)   
+    
        
-      
+class FileOpener(q.QObject):
+    """
+    Takes care of creating and destroying sourcereader objects and their corresponding gui widgets.
+    """
+
+    sourceReaderChanged = q.pyqtSignal(SourceReader)
+    dataChanged = q.pyqtSignal(pd.DataFrame)
+    sourcePathChanged = q.pyqtSignal(str)
+
+    def __init__(self,sourceReaderWidgetContainer):
+        """
+        parameters:
+        -----------
+
+        sourceReaderWidgetContainer: a container object in which the source reader widgets can be placed
+        """
+        
+        super(SourceReader,self).__init__()
+        
+        self.sourceReaderWidgetContainer = sourceReaderWidgetContainer;
+        self.__sourceReader = None
+        
+    def openFiles(paths):
+        singleExtension = len(set([os.path.splitext(path)[-1] for path in paths])) == 1
+        
+        if (singleExtension):
+            ext = os.path.splitext(paths[0])[-1]
+            if os.path.isfile(path) and RegisteredSourceReader.hasSourceReaderForFileType(ext):
+                registeredSourceReader = RegisteredSourceReader.getSourceReaderForFileType(ext)
+                if registeredSourceReader.maxNumberOfFiles >= len(paths):
+                    self.sourceReader = registeredSourceReader.getNewSourceReader();
+                    
+                
+                
+        else:
+            #cannot handle multiple file extensions being dropped simultaneously
+            pass
+     
+    @property
+    def sourceReader(self):
+        return self.__sourceReader;
+
+    @sourceReader.setter
+    def sourceReader(self,sourceReader):
+        if self.__sourceReader is not None:
+            self.__sourceReader.dataChanged.disconnect(self._sourceReader_dataChanged)
+            self.__sourceReader.sourceChanged.disconnect(self._sourceReader_sourceChanged)
+        
+        self.__sourceReader = sourceReader;
+        sourceReader.dataChanged.connect(self._sourceReader_dataChanged)
+        sourceReader.sourceChanged.connect(self._sourceReader_sourceChanged)
+
+        self.sourceReaderChanged.emit(self.__sourceReader)
+    
+    def _sourceReader_dataChanged(self,df):
+        self.dataChanged.emit(df)
+
+    def _sourceReader_sourceChanged(self,path):
+        self.sourcePathChanged.emit(path)      
 
 class FeatureTracker(q.QObject):
 

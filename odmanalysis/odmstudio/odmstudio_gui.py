@@ -103,7 +103,7 @@ class CsvReaderWidget(SourceReaderWidget):
             self.readFileAsync(fileName)
 
     def readFileAsync(self,fileName):
-        self.readerThread = self._sourceReader.loadDataFromFileAsync(str(fileName))
+        self.readerThread = self._sourceReader.readAsync(str(fileName))
        
         
          
