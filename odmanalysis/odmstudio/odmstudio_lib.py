@@ -10,7 +10,10 @@ from functools import wraps
 
 
 class RegisterSourceReader(object):
-    
+    """
+    Decorate classes that inherit from SourceReader with this method to indicate what kind of files the sourcereader handles.
+    """
+
     _sourceReaders = {}
 
     @classmethod
