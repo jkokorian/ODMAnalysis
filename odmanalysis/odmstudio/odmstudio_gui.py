@@ -80,8 +80,8 @@ class FileOpener(qt.QWidget):
 
     
     def showOpenFileDialog(self):
-        extensionsFilter = ",".join([srr.getFilterString() for srr in SourceReaderFactory.getSourceReaderRegistrations()])
-        fileName = qt.QFileDialog.getOpenFileName(parent=None,caption="open file...",directory="",filter="")
+        extensionsFilter = ";;".join([srr.getFilterString() for srr in SourceReaderFactory.getSourceReaderRegistrations()])
+        fileName = qt.QFileDialog.getOpenFileName(parent=None,caption="open file...",directory="",filter=extensionsFilter)
         self.tryOpenFiles([fileName])
 
     def tryOpenFiles(self,paths):

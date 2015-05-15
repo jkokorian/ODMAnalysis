@@ -5,6 +5,7 @@ import numpy as np
 import odmanalysis as odm
 from functools import wraps
 from odmstudio_framework import RegisterSourceReader
+import cv2
    
     
 
@@ -18,7 +19,27 @@ class SourceReader(q.QObject):
     def __init__(self):
         super(SourceReader,self).__init__()
         self.data = None
-        self._currentPath = ""
+        self._statusMessage = "idle"
+        self._progress = None
+        self._currentFile = None
+        
+    @property
+    def statusMessage(self):
+        return self._statusMessage
+        
+    
+    def _setStatusMessage(self,message):
+        self._statusMessage = message
+        self.statusMessageChanged.emit(message)
+
+    @property
+    def progress(self):
+        return self._progress
+
+    def _setProgress(self,progress):
+        self._progress = progress
+        self.progressChanged.emit(progress)
+
         
     def _emitDataChanged(self):
         self.dataChanged.emit(self.data)
@@ -72,41 +93,54 @@ class VideoReader(SourceReader):
 
     def __init__(self):
         SourceReader.__init__(self)
-        pass
+        
+        self._aoi = (0,0,100,1) #x_left,y_top,width,height
+        self.summingAxis = 0
 
-    def read(self, path):
-        pass
+    def read(self, paths):
+        
+        path = paths
+        super(VideoReader, self).read(path)
 
+        vid = cv2.VideoCapture(path)
+
+        frameCount = int(vid.get(7))
+        frameSize = (vid.get(3),vid.get(4))
+        
+        intensityProfiles = []
+
+        framesRead = 0
+        for i in range(frameCount):
+            result, frame = vid.read()
+            frameAOIGrayscale = frame[self.aoiSlices[0],self.aoiSlices[1],:].sum(axis=2)
+            line = frameAOIGrayscale.sum(axis=self.summingAxis)
+            intensityProfiles.append(line)
+            framesRead += 1
+            self._setProgress((framesRead*100)/frameCount)
+            self._setStatusMessage("%i frames read" % framesRead)
+         
+        self.data = pd.DataFrame(data={'intensityProfile': intensityProfiles})
+        self._emitDataChanged()
+        self._setStatusMessage("file loaded")
+        self._setProgress(100)
+    
     
 
-@RegisterSourceReader("Comma separated", extensions=('csv'),maxNumberOfFiles=1)
+    @property
+    def aoiSlices(self):
+        return (slice(self._aoi[0],self._aoi[0] + self._aoi[2]), slice(self._aoi[1],self._aoi[1] + self._aoi[3]))
+        
+
+
+
+@RegisterSourceReader("Comma separated", extensions=['csv'],maxNumberOfFiles=1)
 class CsvReader(SourceReader):
     
     
 
     def __init__(self):
         SourceReader.__init__(self)
-        self._statusMessage = "idle"
-        self._progress = None
-        self._currentFile = None
         
-    @property
-    def statusMessage(self):
-        return self._statusMessage
-        
-    
-    def _setStatusMessage(self,message):
-        self._statusMessage = message
-        self.statusMessageChanged.emit(message)
-
-    @property
-    def progress(self):
-        return self._progress
-
-    def _setProgress(self,progress):
-        self._progress = progress
-        self.progressChanged.emit(progress)
-
 
     def read(self,path):
         super(CsvReader, self).read(path)

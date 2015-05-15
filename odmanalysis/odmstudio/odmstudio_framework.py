@@ -40,7 +40,7 @@ class SourceReaderRegistration(object):
         self.maxNumberOfFiles = maxNumberOfFiles
 
     def getFilterString(self):
-        extensionString = ",".join(["*.%s" % ext for ext in self.extensions])
+        extensionString = " ".join(["*.%s" % ext for ext in self.extensions])
         return "%s (%s)" % (self.fileType,extensionString)
 
     def __str__(self):
