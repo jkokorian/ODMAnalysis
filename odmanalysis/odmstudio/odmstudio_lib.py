@@ -94,7 +94,7 @@ class VideoReader(SourceReader):
     def __init__(self):
         SourceReader.__init__(self)
         
-        self._aoi = (0,0,100,1) #x_left,y_top,width,height
+        self._aoi = (0,0,100,100) #x_left,y_top,width,height
         self.summingAxis = 0
 
     def read(self, paths):
