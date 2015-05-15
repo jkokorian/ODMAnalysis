@@ -3,7 +3,6 @@ from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
 import odmstudio_gui as gui
 
-gui.__registerWidgets()
 #QtGui.QApplication.setGraphicsSystem('raster')
 app = QtGui.QApplication([])
 #mw = QtGui.QMainWindow()

@@ -27,10 +27,16 @@
     <Compile Include="odmstudio_app.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="odmstudio_framework.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="odmstudio_gui.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="odmstudio_lib.py" />
+    <Compile Include="SourceReaderFactoryTests.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="WidgetFactoryTests.py">
       <SubType>Code</SubType>
     </Compile>

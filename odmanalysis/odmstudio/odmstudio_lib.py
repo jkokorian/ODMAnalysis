@@ -4,45 +4,16 @@ import pandas as pd
 import numpy as np
 import odmanalysis as odm
 from functools import wraps
-
-
-
-
-
-class RegisterSourceReader(object):
-    """
-    Decorate classes that inherit from SourceReader with this method to indicate what kind of files the sourcereader handles.
-    """
-
-    _sourceReaders = {}
-
-    @classmethod
-    def getSourceReaderForFileType(cls, fileType): 
-        return cls._sourceReaders[fileType]
+from odmstudio_framework import RegisterSourceReader
+   
     
-    @classmethod
-    def hasSourceReaderForFileType(cls,fileType):
-        return cls._sourceReaders.has_key(fileType)
-
-    def __init__(self, fileType, maxNumberOfFiles=1):
-        self.fileType = fileType
-        self.maxNumberOfFiles = maxNumberOfFiles;
-
-    def __call__(self,cls):
-        self._sourceReader = cls
-        RegisterSourceReader._sourceReaders[self.fileType] = self
-        
-        return cls
-
-    def getNewSourceReader(self):
-        return self._sourceReader;
-
 
 class SourceReader(q.QObject):
     
     dataChanged = q.pyqtSignal(pd.DataFrame)
     sourceChanged = q.pyqtSignal(str)
-
+    statusMessageChanged = q.pyqtSignal(str)
+    progressChanged = q.pyqtSignal(int)
     
     def __init__(self):
         super(SourceReader,self).__init__()
@@ -70,7 +41,7 @@ class SourceReader(q.QObject):
 
     def _setCurrentPath(self,path):
         self._currentPath = path
-        self.sourceChanged.emit(path)   
+        self.sourceChanged.emit(str(path))   
 
 
     def readAsync(self,path):
@@ -96,7 +67,7 @@ class SourceReader(q.QObject):
         return thread
 
 
-@RegisterSourceReader(".avi")
+@RegisterSourceReader("Video files", extensions=('avi','mpg'), maxNumberOfFiles=1)
 class VideoReader(SourceReader):
 
     def __init__(self):
@@ -108,11 +79,10 @@ class VideoReader(SourceReader):
 
     
 
-@RegisterSourceReader(".csv")
+@RegisterSourceReader("Comma separated", extensions=('csv'),maxNumberOfFiles=1)
 class CsvReader(SourceReader):
     
-    statusMessageChanged = q.pyqtSignal(str)
-    progressChanged = q.pyqtSignal(int)
+    
 
     def __init__(self):
         SourceReader.__init__(self)
@@ -167,65 +137,7 @@ class CsvReader(SourceReader):
         
     
        
-class FileOpener(q.QObject):
-    """
-    Takes care of creating and destroying sourcereader objects and their corresponding gui widgets.
-    """
 
-    sourceReaderChanged = q.pyqtSignal(SourceReader)
-    dataChanged = q.pyqtSignal(pd.DataFrame)
-    sourcePathChanged = q.pyqtSignal(str)
-
-    def __init__(self,sourceReaderWidgetContainer):
-        """
-        parameters:
-        -----------
-
-        sourceReaderWidgetContainer: a container object in which the source reader widgets can be placed
-        """
-        
-        super(SourceReader,self).__init__()
-        
-        self.sourceReaderWidgetContainer = sourceReaderWidgetContainer;
-        self.__sourceReader = None
-        
-    def openFiles(paths):
-        singleExtension = len(set([os.path.splitext(path)[-1] for path in paths])) == 1
-        
-        if (singleExtension):
-            ext = os.path.splitext(paths[0])[-1]
-            if os.path.isfile(path) and RegisteredSourceReader.hasSourceReaderForFileType(ext):
-                registeredSourceReader = RegisteredSourceReader.getSourceReaderForFileType(ext)
-                if registeredSourceReader.maxNumberOfFiles >= len(paths):
-                    self.sourceReader = registeredSourceReader.getNewSourceReader();
-                    
-                
-                
-        else:
-            #cannot handle multiple file extensions being dropped simultaneously
-            pass
-     
-    @property
-    def sourceReader(self):
-        return self.__sourceReader;
-
-    @sourceReader.setter
-    def sourceReader(self,sourceReader):
-        if self.__sourceReader is not None:
-            self.__sourceReader.dataChanged.disconnect(self._sourceReader_dataChanged)
-            self.__sourceReader.sourceChanged.disconnect(self._sourceReader_sourceChanged)
-        
-        self.__sourceReader = sourceReader;
-        sourceReader.dataChanged.connect(self._sourceReader_dataChanged)
-        sourceReader.sourceChanged.connect(self._sourceReader_sourceChanged)
-
-        self.sourceReaderChanged.emit(self.__sourceReader)
-    
-    def _sourceReader_dataChanged(self,df):
-        self.dataChanged.emit(df)
-
-    def _sourceReader_sourceChanged(self,path):
-        self.sourcePathChanged.emit(path)      
 
 class FeatureTracker(q.QObject):
 

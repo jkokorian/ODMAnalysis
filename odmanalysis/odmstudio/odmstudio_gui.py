@@ -6,28 +6,8 @@ import odmstudio_lib as lib
 import pandas as pd
 import numpy as np
 import os
+from odmstudio_framework import *
 
-
-
-
-class WidgetFactory(object):
-    
-    __dict = {}
-    
-    @classmethod
-    def registerWidget(cls,widgetClass,anyClass):
-        cls.__dict[anyClass] = widgetClass
-
-    @classmethod
-    def getWidgetFor(cls,anyClass):
-        if cls.__dict.has_key(anyClass):
-            return cls.__dict[anyClass]
-        else:
-            return qt.QWidget
-
-def __registerWidgets():
-    WidgetFactory.registerWidget(CurveFitTrackerWidget,lib.CurveFitTracker)
-    WidgetFactory.registerWidget(FFTPhaseShiftTrackerWidget,lib.FFTPhaseShiftTracker)
 
 
 class PlotController(q.QObject):
@@ -50,9 +30,10 @@ class PlotController(q.QObject):
 
 
 class SourceReaderWidget(qt.QWidget):
-    
-    
-    def __init__(self,parent=None):
+    """
+    Decorate classes that use this class as a base with the RegisterWidgetFor decorator, to indicate for sourcereader it handles.
+    """    
+    def __init__(self,sourceReader,parent=None):
         super(SourceReaderWidget,self).__init__(parent)
         
 
@@ -60,52 +41,134 @@ class SourceReaderWidget(qt.QWidget):
     def sourceReader(self):
         return self._sourceReader
 
-    def handleDroppedFile(self,path):
-        pass
 
-    
-    
-class CsvReaderWidget(SourceReaderWidget):
-    def __init__(self, parent=None):
-        SourceReaderWidget.__init__(self,parent)
-        
-        self._sourceReader = lib.CsvReader()
-        
-        self.readerThread = None
-
-        #create ui components
-        
-        layout = qt.QVBoxLayout()
-        self.browseButton = qt.QPushButton("Browse...",parent=self)
-        self.statusMessageLabel = qt.QLabel("",parent=self)
-        self.progressBar = qt.QProgressBar()
-        layout.addWidget(self.browseButton)
-        layout.addWidget(self.statusMessageLabel)
-        layout.addWidget(self.progressBar)
-        layout.addStretch()
-        self.setLayout(layout)
-
-        
-        #connect signals and slots
-        
-        self._sourceReader.statusMessageChanged.connect(self.statusMessageLabel.setText)
-        self._sourceReader.progressChanged.connect(self.progressBar.setValue)
-        self.browseButton.clicked.connect(self.showBrowseDialog)
-    
-    
-
-    def handleDroppedFile(self, path):
-        self.readFileAsync(path)    
-
-    def showBrowseDialog(self):
-        fileName = qt.QFileDialog.getOpenFileName(self)
-        if fileName is not None:
-            self.readFileAsync(fileName)
-
-    def readFileAsync(self,fileName):
-        self.readerThread = self._sourceReader.readAsync(str(fileName))
        
+
+class FileOpener(qt.QWidget):
+    """
+    Takes care of creating and destroying sourcereader objects and their corresponding gui widgets.
+    """
+
+    sourceReaderChanged = q.pyqtSignal(lib.SourceReader)
+    dataChanged = q.pyqtSignal(pd.DataFrame)
+    sourcePathChanged = q.pyqtSignal(str)
+    progressChanged = q.pyqtSignal(int)
+    statusMessageChanged = q.pyqtSignal(str)
+
+
+    def __init__(self,parent=None):
+        """
+        parameters:
+        -----------
+
+        sourceReaderWidgetContainer: a container object in which the source reader widgets can be placed
+        """
         
+        super(qt.QWidget,self).__init__(parent=parent)
+        
+        self.sourceReaderWidget = None
+        self.__sourceReader = None
+        self.__statusMessage = ""
+        self.__readerThread = None
+
+        #actions
+        self.openFileAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_DialogOpenButton),"Open file...",self)
+        
+
+        #connect signals and slots
+        self.openFileAction.triggered.connect(self.showOpenFileDialog)
+
+    
+    def showOpenFileDialog(self):
+        extensionsFilter = ",".join([srr.getFilterString() for srr in SourceReaderFactory.getSourceReaderRegistrations()])
+        fileName = qt.QFileDialog.getOpenFileName(parent=None,caption="open file...",directory="",filter="")
+        self.tryOpenFiles([fileName])
+
+    def tryOpenFiles(self,paths):
+        try:
+            self.openFiles([str(path) for path in paths]) #explicit conversion from QString to str, otherwise os.path.* function fail.
+        except:
+            self._setStatusMessage("Unable to open file(s)")
+
+    def openFiles(self,paths):
+        singleExtension = len(set([os.path.splitext(path)[-1] for path in paths])) == 1
+        
+        assert singleExtension
+
+        ext = os.path.splitext(paths[0])[-1][1:]
+        
+        assert SourceReaderFactory.hasSourceReaderForExtension(ext)
+
+        srRegistration = SourceReaderFactory.getSourceReaderForExtension(ext)
+
+        assert srRegistration.maxNumberOfFiles >= len(paths)
+
+
+        #set source reader
+        self.sourceReader = srRegistration.sourceReaderType();
+
+
+        SRWidget = WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
+        
+
+        if SRWidget is not None:
+            self.sourceReaderWidget = SRWidget(self.sourceReader,parent=self)
+            #TODO: show the SourceReader Widget in a dialog
+
+        else:
+            self.sourceReaderWidget = None
+            
+            # if there is no widget defined for the target SourceReader, read the files to open immediately
+            if len(paths) == 1:
+                self.__readerThread = self.sourceReader.readAsync(paths[0])
+            else:
+                self.__readerThread = self.sourceReader.readAsync(paths)
+            
+                
+     
+    @property
+    def sourceReader(self):
+        return self.__sourceReader;
+
+    @sourceReader.setter
+    def sourceReader(self,sourceReader):
+        #disconnect current sourcereader
+        if self.__sourceReader is not None:
+            self.__sourceReader.dataChanged.disconnect(self.__sourceReader_dataChanged)
+            self.__sourceReader.sourceChanged.disconnect(self.__sourceReader_sourceChanged)
+            self.__sourceReader.statusMessageChanged.disconnect(self._setStatusMessage)
+            self.__sourceReader.progressChanged.disconnect(self.__sourceReader_progressChanged)
+        
+        #connect new sourcereader
+        self.__sourceReader = sourceReader;
+        self.__sourceReader.dataChanged.connect(self.__sourceReader_dataChanged)
+        self.__sourceReader.sourceChanged.connect(self.__sourceReader_sourceChanged)
+        self.__sourceReader.statusMessageChanged.connect(self._setStatusMessage)
+        self.__sourceReader.progressChanged.connect(self.__sourceReader_progressChanged)
+
+        self.sourceReaderChanged.emit(self.__sourceReader)
+    
+    def __sourceReader_dataChanged(self,df):
+        self.dataChanged.emit(df)
+
+    def __sourceReader_sourceChanged(self,path):
+        self.sourcePathChanged.emit(path)
+
+    def __sourceReader_statusMessageChanged(self,message):
+        self.statusMessageChanged.emit(message)
+
+    def __sourceReader_progressChanged(self,progress):
+        self.progressChanged.emit(progress)
+
+    @property
+    def statusMessage(self):
+        return self.__statusMessage
+
+    def _setStatusMessage(self,message):
+        self.__statusMessage = message
+        self.statusMessageChanged.emit(message)
+
+                
          
 class FeatureTrackerControlsWidget(qt.QWidget):
 
@@ -235,7 +298,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             self.featureTrackerWidget.setParent(None)
 
         self.featureTracker = self.availableFeatureTrackers[self.trackerComboBox.currentIndex()]
-        self.featureTrackerWidget = WidgetFactory.getWidgetFor(self.featureTracker)(parent=self)
+        self.featureTrackerWidget = WidgetFactory.getWidgetClassFor(self.featureTracker)(parent=self)
         if (self.featureTrackerWidget is PlotController):
             self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
         self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
@@ -272,6 +335,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             self.upperLimitSpinBox.setMaximum(xMaximum)
 
 
+@RegisterWidgetFor(lib.CurveFitTracker)
 class CurveFitTrackerWidget(qt.QWidget,PlotController):
 
 
@@ -294,7 +358,7 @@ class CurveFitTrackerWidget(qt.QWidget,PlotController):
         pass
 
     
-
+@RegisterWidgetFor(lib.FFTPhaseShiftTracker)
 class FFTPhaseShiftTrackerWidget(qt.QWidget,PlotController):
     def __init__(self,parent=None):
         qt.QWidget.__init__(self,parent)
@@ -420,7 +484,7 @@ class DisplacementPlotWidget(qt.QWidget):
 
 class ODMStudioMainWindow(qt.QMainWindow):
 
-    fileDropped = q.pyqtSignal(str)
+    filesDropped = q.pyqtSignal(list)
 
     def __init__(self,parent=None):
         qt.QMainWindow.__init__(self,parent)
@@ -435,7 +499,7 @@ class ODMStudioMainWindow(qt.QMainWindow):
 
 
         self.displacementPlot = DisplacementPlotWidget(self)
-        self.sourceReaderWidget = CsvReaderWidget(self)
+        self.fileOpener = FileOpener(self)
         self.intensityProfilePlot = IntensityProfilePlotWidget(self)
 
         movingFeature = lib.TrackableFeature("moving feature")
@@ -447,12 +511,9 @@ class ODMStudioMainWindow(qt.QMainWindow):
         self.referenceFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
 
         
-        sourceReaderDock = dock.Dock("Source Reader", size=(200,400))
-        area.addDock(sourceReaderDock, 'left')      ## place d1 at left edge of dock area (it will fill the whole space since there are no other docks yet)
-        sourceReaderDock.addWidget(self.sourceReaderWidget)
         
         intensityProfileDock = dock.Dock("Intensity Profiles", size=(500, 500))     ## give this dock the minimum possible size
-        area.addDock(intensityProfileDock, 'right', sourceReaderDock)     ## place d2 at right edge of dock area
+        area.addDock(intensityProfileDock, 'left')     ## place d2 at left of dock area
         intensityProfileDock.addWidget(self.intensityProfilePlot)
         
         displacementGraphDock = dock.Dock("Displacement Graph", size=(500,500))
@@ -465,14 +526,24 @@ class ODMStudioMainWindow(qt.QMainWindow):
         featureTrackersDock.addWidget(self.referenceFeatureWidget)
 
 
+        #setup statusbar
+        self.progressBar = qt.QProgressBar()
+        self.statusBar().addPermanentWidget(self.progressBar)
+
+
+        #setup menubar
+        self.menuBar().addAction(self.fileOpener.openFileAction)
+
 
         #connect signals and slots
-        self.fileDropped.connect(self.sourceReaderWidget.handleDroppedFile)
+        self.filesDropped.connect(self.fileOpener.tryOpenFiles)
         
-        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.intensityProfilePlot.setSourceData)
-        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.movingFeatureWidget.setSourceData)
-        self.sourceReaderWidget.sourceReader.dataChanged.connect(self.referenceFeatureWidget.setSourceData)
-        self.sourceReaderWidget.sourceReader.sourceChanged.connect(self.setWindowTitle)
+        self.fileOpener.dataChanged.connect(self.intensityProfilePlot.setSourceData)
+        self.fileOpener.dataChanged.connect(self.movingFeatureWidget.setSourceData)
+        self.fileOpener.dataChanged.connect(self.referenceFeatureWidget.setSourceData)
+        self.fileOpener.sourcePathChanged.connect(self.setWindowTitle)
+        self.fileOpener.statusMessageChanged.connect(self.logMessage)
+        self.fileOpener.progressChanged.connect(self.logProgress)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -489,14 +560,17 @@ class ODMStudioMainWindow(qt.QMainWindow):
             event.ignore()
 
     def dropEvent(self, event):
-        for url in event.mimeData().urls():
-            path = url.toLocalFile().toLocal8Bit().data()
-            if os.path.isfile(path):
-                self._emitFileDropped(path)
+        paths = [url.toLocalFile().toLocal8Bit().data() for url in event.mimeData().urls()]
+        paths = [path for path in paths if os.path.isfile(path)]
+        if paths:
+            self.filesDropped.emit(paths)
 
-    def _emitFileDropped(self,path):
-        self.fileDropped.emit(path)
 
+    def logMessage(self,message):
+        self.statusBar().showMessage(message,1000)
+
+    def logProgress(self,progress):
+        self.progressBar.setValue(progress)
     
 
 def logToConsole(message):
