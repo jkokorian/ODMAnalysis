@@ -34,12 +34,25 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="odmstudio_lib.py" />
+    <Compile Include="odmstudio_plugins.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="odmstudio_pluginsTests.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plugins\TestPlugin\testplugin.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="SourceReaderFactoryTests.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="WidgetFactoryTests.py">
       <SubType>Code</SubType>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="plugins\" />
+    <Folder Include="plugins\TestPlugin\" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
