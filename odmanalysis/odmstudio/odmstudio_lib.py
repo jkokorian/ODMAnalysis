@@ -105,21 +105,31 @@ class VideoReader(SourceReader):
         vid = cv2.VideoCapture(path)
 
         frameCount = int(vid.get(7))
+        frameRate = vid.get(5)
         frameSize = (vid.get(3),vid.get(4))
         
-        intensityProfiles = []
+        np.arange(frameCount)/frameRate
 
         framesRead = 0
+        intensityProfiles = []
+        timeSteps = np.arange(frameCount)/frameRate
+
         for i in range(frameCount):
             result, frame = vid.read()
             frameAOIGrayscale = frame[self.aoiSlices[0],self.aoiSlices[1],:].sum(axis=2)
             line = frameAOIGrayscale.sum(axis=self.summingAxis)
+            #self.data.set_value(i,'intensityProfile', line)
             intensityProfiles.append(line)
+
             framesRead += 1
+            self.data = pd.DataFrame(data={'intensityProfile': intensityProfiles, 'timeStep': timeSteps[0:framesRead]})
+
             self._setProgress((framesRead*100)/frameCount)
             self._setStatusMessage("%i frames read" % framesRead)
-         
-        self.data = pd.DataFrame(data={'intensityProfile': intensityProfiles})
+            self._emitDataChanged()
+
+        
+        
         self._emitDataChanged()
         self._setStatusMessage("file loaded")
         self._setProgress(100)
