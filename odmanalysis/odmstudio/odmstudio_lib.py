@@ -82,8 +82,10 @@ class SourceReader(q.QObject):
                 that.read(path)
 
 
+
         thread = DataLoaderThread()
         thread.start()
+        
         
         return thread
 
@@ -130,7 +132,6 @@ class VideoReader(SourceReader):
 
         
         
-        self._emitDataChanged()
         self._setStatusMessage("file loaded")
         self._setProgress(100)
     
