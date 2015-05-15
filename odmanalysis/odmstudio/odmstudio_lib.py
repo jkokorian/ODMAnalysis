@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import odmanalysis as odm
 from functools import wraps
-from odmstudio_framework import RegisterSourceReader
+from odmstudio_framework import RegisterSourceReader, CancellableWorkerThread
 import cv2
    
     
@@ -44,7 +44,7 @@ class SourceReader(q.QObject):
     def _emitDataChanged(self):
         self.dataChanged.emit(self.data)
 
-    def read(self,path):
+    def read(self,path,cancellationToken=None):
         """
         Read data from path synchronously.
 
@@ -77,9 +77,12 @@ class SourceReader(q.QObject):
         
         
         that = self
-        class DataLoaderThread(q.QThread):
+        class DataLoaderThread(CancellableWorkerThread):
+            def __init__(self):
+                CancellableWorkerThread.__init__(self)
+
             def run(self):
-                that.read(path)
+                that.read(path,cancellationToken = self.cancellationToken)
 
 
 
@@ -99,7 +102,7 @@ class VideoReader(SourceReader):
         self._aoi = (0,0,100,100) #x_left,y_top,width,height
         self.summingAxis = 0
 
-    def read(self, paths):
+    def read(self, paths, cancellationToken=None):
         
         path = paths
         super(VideoReader, self).read(path)
@@ -130,6 +133,9 @@ class VideoReader(SourceReader):
             self._setStatusMessage("%i frames read" % framesRead)
             self._emitDataChanged()
 
+            if cancellationToken and cancellationToken.isCancellationRequested:
+                break
+
         
         
         self._setStatusMessage("file loaded")
@@ -153,7 +159,7 @@ class CsvReader(SourceReader):
         SourceReader.__init__(self)
         
 
-    def read(self,path):
+    def read(self,path,cancellationToken=None):
         super(CsvReader, self).read(path)
         
         self._setStatusMessage("reading...")

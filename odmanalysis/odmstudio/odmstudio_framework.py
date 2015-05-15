@@ -1,6 +1,37 @@
 import PyQt4.QtGui as qt
 import PyQt4.QtCore as q
 
+
+class CancellationToken(object):
+    def __init__(self):
+        self.__isCancellationRequested = False
+
+    @property
+    def isCancellationRequested(self):
+        return self.__isCancellationRequested
+
+    def requestCancel(self):
+        self.__isCancellationRequested = True
+
+
+
+
+class WorkerThread(q.QThread):
+
+    def __init__(self):
+        q.QThread.__init__(self)
+
+
+class CancellableWorkerThread(WorkerThread):
+    def __init__(self):
+        WorkerThread.__init__(self)
+        self.cancellationToken = CancellationToken()
+
+    def cancel(self):
+        self.cancellationToken.requestCancel();
+
+
+
 class WidgetFactory(object):
     
     __dict = {}
