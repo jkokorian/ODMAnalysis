@@ -87,3 +87,29 @@ class RegisterSourceReader(object):
         SourceReaderFactory.registerSourceReader(srRegistration)
         
         return cls
+
+
+
+######################################################
+#PLUGINS
+######################################################
+
+import imp
+import os
+
+pluginRoot = "./plugins"
+_pluginModules = []
+
+def getPlugins():
+    pluginFolders = [f for f in [os.path.join(pluginRoot,f) for f in os.listdir(pluginRoot)] if os.path.isdir(f) and "__init__.py" in os.listdir(f)]
+
+    plugins = []
+    for pluginFolder in pluginFolders:
+        plugins += [dict(name=f.rstrip(".py"),path=pluginFolder,info=imp.find_module(f.rstrip(".py"),[pluginFolder])) for f in os.listdir(pluginFolder) if f.endswith(".py") and f != "__init__.py"]
+
+    return plugins
+
+def loadPlugins():
+    global _pluginModules
+    _pluginModules = [imp.load_module(plugin['name'], *plugin["info"]) for plugin in getPlugins()]
+        

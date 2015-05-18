@@ -40,11 +40,13 @@
     <Compile Include="odmstudio_pluginsTests.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="plugins\kenker.py">
+    <Compile Include="plugins\sourcereaders\csvreading.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="plugins\someplugin\kenker.py" />
-    <Compile Include="plugins\someplugin\__init__.py" />
+    <Compile Include="plugins\sourcereaders\videofilereading.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plugins\sourcereaders\__init__.py" />
     <Compile Include="plugins\__init__.py">
       <SubType>Code</SubType>
     </Compile>
@@ -54,10 +56,13 @@
     <Compile Include="WidgetFactoryTests.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="plugins\" />
-    <Folder Include="plugins\someplugin\" />
+    <Folder Include="plugins\sourcereaders\" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
