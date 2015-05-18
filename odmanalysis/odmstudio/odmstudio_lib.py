@@ -118,38 +118,6 @@ class FeatureTracker(q.QObject):
         
     
 
-@FeatureTracker.register
-class CurveFitTracker(FeatureTracker):
-
-    @classmethod
-    def getDisplayName(cls):
-        return "Curve-fit"
-
-    def __init__(self):
-        FeatureTracker.__init__(self)
-        self.fitFunction = None     
-        
-        
-    def findPosition(self,intensityProfile):
-        #TODO: implement        
-        return 0
-
-@FeatureTracker.register
-class FFTPhaseShiftTracker(FeatureTracker):
-    
-    @classmethod
-    def getDisplayName(cls):
-        return "FFT phase shift"
-    
-    def __init__(self):
-        FeatureTracker.__init__(self)
-        
-    def findPosition(self, intensityProfile):
-        """
-        TODO: implement
-        """
-        return super(FFTTracker, self).findPosition(intensityProfile)
-
 
 
 class TrackableFeature(q.QObject):

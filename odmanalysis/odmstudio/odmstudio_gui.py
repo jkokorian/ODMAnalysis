@@ -335,44 +335,8 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             self.upperLimitSpinBox.setMaximum(xMaximum)
 
 
-@RegisterWidgetFor(lib.CurveFitTracker)
-class CurveFitTrackerWidget(qt.QWidget,PlotController):
-
-
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
-        PlotController.__init__(self,parent)
-        
-        self._sourceIntensityProfiles = None
-        
-        layout = qt.QVBoxLayout()
-        self.groupbox = qt.QGroupBox("Curve-fit settings")
-        layout.addWidget(self.groupbox)
-        self.setLayout(layout)
-        
-
-    def connectToPlotWidget(self, plotWidget):
-        return super(CurveFitTrackerWidget, self).connectToPlotWidget(plotWidget)
-
-    def disconnectPlotWidget(self):
-        pass
-
     
-@RegisterWidgetFor(lib.FFTPhaseShiftTracker)
-class FFTPhaseShiftTrackerWidget(qt.QWidget,PlotController):
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
-        PlotController.__init__(self,parent)
-        layout = qt.QVBoxLayout()
-        self.groupbox = qt.QGroupBox("FFT phase-shift settings")
-        layout.addWidget(self.groupbox)
-        self.setLayout(layout)
 
-    def connectToPlotWidget(self, plotWidget):
-        return super(CurveFitTrackerWidget, self).connectToPlotWidget(plotWidget)
-
-    def disconnectPlotWidget(self):
-        pass
 
 
 class TrackableFeatureControlWidget(qt.QWidget,PlotController):

@@ -40,6 +40,15 @@
     <Compile Include="odmstudio_pluginsTests.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plugins\featuretrackers\CurveFitTracking.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plugins\featuretrackers\FFTPhaseShiftTracking.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plugins\featuretrackers\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plugins\sourcereaders\csvreading.py">
       <SubType>Code</SubType>
     </Compile>
@@ -62,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="plugins\" />
+    <Folder Include="plugins\featuretrackers\" />
     <Folder Include="plugins\sourcereaders\" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
