@@ -1,16 +1,20 @@
 import unittest
-from odmstudio_lib import FeatureTracker,CurveFitTracker,FFTPhaseShiftTracker
-
+import odmstudio_framework as fw
+from odmstudio_lib import FeatureTracker
 
 
 class Test_FeatureTrackerTests(unittest.TestCase):
     def test_TrackerRegistrations(self):
+        fw.loadPlugins()
 
-        featureTrackers= FeatureTracker.getRegisteredFeatureTrackers()
+        featureTrackers= fw.FeatureTrackerFactory.getFeatureTrackers()
         self.assertTrue(len(featureTrackers) > 0)
 
     def test_TrackerRetreival(self):
-        featureTrackers = FeatureTracker.getRegisteredFeatureTrackers()
+        fw.loadPlugins()
+
+        featureTrackers= fw.FeatureTrackerFactory.getFeatureTrackers()
+
 
         tracker = featureTrackers[0]
         print tracker
@@ -20,8 +24,7 @@ class Test_FeatureTrackerTests(unittest.TestCase):
         displayName = FeatureTracker.getDisplayName()
         self.assertTrue(displayName is not None)
 
-    def test_CustomDisplayName(self):
-        self.assertTrue(CurveFitTracker.getDisplayName() == "Curve-fit")
+    
 
 
 if __name__ == '__main__':

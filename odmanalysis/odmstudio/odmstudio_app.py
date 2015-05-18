@@ -1,8 +1,7 @@
-
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
 import odmstudio_gui as gui
-import odmstudio_framework as fw
+import odmanalysis.odmstudio.odmstudio_framework as fw
 
 fw.loadPlugins()
 

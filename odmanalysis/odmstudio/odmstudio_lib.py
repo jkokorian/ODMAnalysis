@@ -94,17 +94,6 @@ class SourceReader(q.QObject):
 
 class FeatureTracker(q.QObject):
 
-    __featureTrackers = []
-
-    @classmethod
-    def register(cls,childClass):
-        cls.__featureTrackers.append(childClass)
-        return childClass
-
-    @classmethod
-    def getRegisteredFeatureTrackers(cls):
-        return [ft for ft in cls.__featureTrackers]
-
     @classmethod
     def getDisplayName(cls):
         return str(cls)

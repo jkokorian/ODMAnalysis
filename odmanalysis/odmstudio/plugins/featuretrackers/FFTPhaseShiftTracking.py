@@ -1,10 +1,10 @@
 from odmanalysis.odmstudio import odmstudio_lib as lib
-from odmanalysis.odmstudio import odmstudio_framework as framework
+from odmanalysis.odmstudio import odmstudio_framework as fw
 from odmanalysis.odmstudio.odmstudio_gui import PlotController
 from PyQt4 import QtCore as q
 from PyQt4 import QtGui as qt
 
-@lib.FeatureTracker.register
+@fw.RegisterFeatureTracker()
 class FFTPhaseShiftTracker(lib.FeatureTracker):
     
     @classmethod

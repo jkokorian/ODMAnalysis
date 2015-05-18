@@ -6,7 +6,7 @@ import odmstudio_lib as lib
 import pandas as pd
 import numpy as np
 import os
-from odmstudio_framework import *
+from odmanalysis.odmstudio.odmstudio_framework import *
 
 
 
@@ -245,7 +245,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
 
         self.featureTrackerWidgetContainer = qt.QGridLayout()
         self.featureTrackerWidget = None
-        self.availableFeatureTrackers = lib.FeatureTracker.getRegisteredFeatureTrackers()
+        self.availableFeatureTrackers = FeatureTrackerFactory.getFeatureTrackers()
         
         for tracker in self.availableFeatureTrackers:
             self.trackerComboBox.addItem(tracker.getDisplayName())

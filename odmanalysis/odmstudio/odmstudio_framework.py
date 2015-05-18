@@ -90,6 +90,34 @@ class RegisterSourceReader(object):
 
 
 
+
+class FeatureTrackerFactory(object):
+    _featureTrackers = []
+
+    @classmethod
+    def registerFeatureTracker(cls,featureTracker):
+        cls._featureTrackers.append(featureTracker)
+
+
+    @classmethod
+    def getFeatureTrackers(cls):
+        return [ft for ft in cls._featureTrackers]
+
+
+class RegisterFeatureTracker(object):
+    """
+    Decorate classes that inherit from FeatureTracker with this method to register them with the FeatureTrackerFactory.
+    """
+
+
+    def __init__(self, name=""):
+        self.name = name
+
+    def __call__(self,cls):
+        
+        FeatureTrackerFactory.registerFeatureTracker(cls)
+        return cls
+
 ######################################################
 #PLUGINS
 ######################################################
