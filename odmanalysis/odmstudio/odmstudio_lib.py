@@ -111,11 +111,26 @@ class FeatureTracker(q.QObject):
 
     def __init__(self):
         q.QObject.__init__(self)
+        self.xmin = None
+        self.xmax = None
         
     
-    def findPosition(self,intensityProfile):
+    def findNextPosition(self,intensityProfile):
         raise NotImplemented("Implement this method in child class")
-        
+
+    def initialize(self,intensityProfile):
+        pass
+
+    def setXmin(self,value):
+        self.xmin = value
+    
+    def setXmax(self,value):
+        self.xmax = value
+
+    @property
+    def rangeSlice(self):
+        return slice(self.xmin,self.xmax)
+
     
 
 

@@ -1,5 +1,5 @@
-import odmstudio_lib as lib
-import odmstudio_framework as framework
+from odmanalysis.odmstudio import odmstudio_lib as lib
+from odmanalysis.odmstudio import odmstudio_framework as framework
 import odmanalysis as odm
 import pandas as pd
 

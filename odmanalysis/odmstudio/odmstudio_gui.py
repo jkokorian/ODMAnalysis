@@ -298,10 +298,12 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             self.featureTrackerWidget.setParent(None)
 
         self.featureTracker = self.availableFeatureTrackers[self.trackerComboBox.currentIndex()]
-        self.featureTrackerWidget = WidgetFactory.getWidgetClassFor(self.featureTracker)(parent=self)
-        if (self.featureTrackerWidget is PlotController):
-            self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
-        self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
+        featureTrackerWidgetType = WidgetFactory.getWidgetClassFor(self.featureTracker)
+        if (featureTrackerWidgetType is not None):
+            self.featureTrackerWidget = featureTrackerWidgetType(parent=None)
+            if (self.featureTrackerWidget is PlotController):
+                self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
+            self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
         
     def handleFeatureTrackerSelected(self):
         self.featureTrackerControlsWidget.setFeatureTracker(self.featureTracker)

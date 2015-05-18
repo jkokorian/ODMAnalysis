@@ -24,6 +24,7 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.ndimage.filters import gaussian_filter
 from scipy import vectorize
+from collections import OrderedDict
 
 class EstimatorDefinition(object):
     def __init__(self,id,promptMessage=None):
@@ -136,7 +137,7 @@ class Harmonic(DisplacementFitFunction):
     
     def getDisplacement(self,x0,A,f,a1,a0):
         return x0
-	
+    
 
 class Merlijnian(DisplacementFitFunction, BeamWidthFitFunction):
     def __init__(self):
@@ -307,9 +308,11 @@ class ScaledSpline0(DisplacementFitFunction):
         xValues = np.arange(len(intensityProfile))
         yValues = gaussian_filter(intensityProfile,filter_sigma)
         self.spline = InterpolatedUnivariateSpline(xValues, yValues)
-        return {'x0': 0.0,
-                'A': 1.0,
-                'a0': 0.0}
+        valuesDict = OrderedDict()
+        valuesDict['x0'] = 0.0
+        valuesDict['A'] = 1.0
+        valuesDict['a0'] = 0.0
+        return valuesDict
         
     def getDisplacement(self,x0,A,a0):
         return x0
