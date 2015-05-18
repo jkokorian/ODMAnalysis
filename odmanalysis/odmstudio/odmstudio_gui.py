@@ -205,7 +205,7 @@ class FeatureTrackerControlsWidget(qt.QWidget):
 
     def setFeatureTracker(self,featureTracker):
         self._featureTracker = featureTracker
-        self.featureTrackerChanged.emit(featureTracker)
+        #self.featureTrackerChanged.emit(featureTracker)
 
     def getFeatureTracker(self):
         return self._featureTracker
