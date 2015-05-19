@@ -3,12 +3,12 @@ from odmanalysis.odmstudio import odmstudio_framework as framework
 import odmanalysis as odm
 import pandas as pd
 
-@framework.RegisterSourceReader("Comma separated", extensions=['csv'],maxNumberOfFiles=1)
+@framework.RegisterSourceReader("Comma separated", extensions=['csv'], maxNumberOfFiles=1)
 class CsvReader(lib.SourceReader):
     
 
-    def __init__(self,dataSource):
-        lib.SourceReader.__init__(self,dataSource)
+    def __init__(self, dataSource):
+        lib.SourceReader.__init__(self, dataSource)
         
 
     def read(self,path):
