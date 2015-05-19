@@ -10,45 +10,65 @@ import cv2
 class DataSource(q.QObject):
     
     @classmethod
-    def createDefaultDataFrame(cls):
+    def createDefaultSourceDataFrame(cls):
         return pd.DataFrame(data={"intensityProfile": []})
+
+    @classmethod
+    def createDefaultResultsList(cls):
+        return []
 
     sourceDataChanged = q.pyqtSignal(pd.DataFrame)
     resultDataChanged = q.pyqtSignal(pd.DataFrame)
     sourcePathChanged = q.pyqtSignal(str)
 
     @property
+    def sourcePath(self):
+        return self.__sourcePath
+
+    @property
+    def sourceDataFrame(self):
+        return self.__sourceDataFrame
+    
+    @property
+    def resultsDataFrame(self):
+        return pd.DataFrame(data=self.__resultsList)
+
+    @property
     def intensityProfiles(self):
-        return self.__sourceDataframe['intensityProfile']
+        return self.sourceDataFrame['intensityProfile']
 
     @property
     def currentIndexLocation(self):
         return self.__currentIloc
     
     @property
+    def currentIntensityProfile(self):
+        return self.intensityProfiles.iloc[self.currentIndexLocation]
+    
+    @property
     def sourceLength(self):
-        return len(self.__sourceDataframe)
+        return len(self.sourceDataFrame)
+
+    @property
+    def resultsLength(self):
+        return len(self.resultsDataFrame)
 
     @property
     def sourceIsEmpty(self):
         return self.sourceLength == 0
 
     @property
-    def currentIntensityProfile(self):
-        return self.intensityProfiles.iloc[self.currentIndexLocation]
-    
-    @property
-    def sourcePath(self):
-        return self.__sourcePath
+    def resultsIsEmpty(self):
+        return self.resultsLength == 0
 
     @property
-    def sourceDataFrame(self):
-        return self.__sourceDataframe
-    
+    def independentVariableNames(self):
+        return [columnName for columnName in df.columns if df[columnName].dtype == 'float' or df[columnName].dtype == 'int']
     
     def __init__(self):
         q.QObject.__init__(self)
-        self.__sourceDataframe = DataSource.createDefaultDataFrame()
+        self.__sourceDataFrame = DataSource.createDefaultSourceDataFrame()
+        self.__resultsList = DataSource.createDefaultResultsList()
         self.__currentIloc = 0
         self.__sourcePath = ""
 
@@ -57,7 +77,7 @@ class DataSource(q.QObject):
         self.__currentIloc = iloc
 
     def setSourceDataFrame(self,dataframe):
-        self.__sourceDataframe = dataframe
+        self.__sourceDataFrame = dataframe
         self.sourceDataChanged.emit(dataframe)
 
     def setSourcePath(self,path):
@@ -65,9 +85,11 @@ class DataSource(q.QObject):
         self.sourcePathChanged.emit(path)
 
     def clear(self):
-        self.setSourceDataFrame(DataSource.createDefaultDataFrame())
+        self.setSourceDataFrame(DataSource.createDefaultSourceDataFrame())
         self.setSourcePath("")
 
+    def storeResultValueAtIloc(self,iloc,key,value):
+        pass
 
 class SourceReader(q.QObject):
     
