@@ -56,7 +56,7 @@ class FileOpener(qt.QWidget):
     statusMessageChanged = q.pyqtSignal(str)
 
 
-    def __init__(self,parent=None):
+    def __init__(self,dataSource,parent=None):
         """
         parameters:
         -----------
@@ -70,6 +70,8 @@ class FileOpener(qt.QWidget):
         self.__sourceReader = None
         self.__statusMessage = ""
         self.__readerThread = None
+        assert isinstance(dataSource,lib.DataSource)
+        self.__dataSource = dataSource
 
         #actions
         self.openFileAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_DialogOpenButton),"Open file...",self)
@@ -105,7 +107,7 @@ class FileOpener(qt.QWidget):
 
 
         #set source reader
-        self.sourceReader = srRegistration.sourceReaderType();
+        self.sourceReader = srRegistration.sourceReaderType(self.__dataSource);
 
 
         SRWidget = WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
@@ -217,7 +219,6 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
     Form for defining a trackable feature
     """
 
-    sourceDataChanged = q.pyqtSignal(pd.DataFrame)
 
     def __init__(self,trackableFeature,parent=None):
         qt.QWidget.__init__(self,parent)
@@ -225,7 +226,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self._trackableFeature = trackableFeature
         self._canDisable = True
         self._featureTrackerIsEnabled = True
-        self._sourceData = None
+
 
         layout = qt.QVBoxLayout()
         

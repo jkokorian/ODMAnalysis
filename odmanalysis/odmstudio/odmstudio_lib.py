@@ -9,10 +9,15 @@ import cv2
    
     
 class DataSource(q.QObject):
+
+    dataChanged = q.pyqtSignal(pd.DataFrame)
+    sourcePathChanged = q.pyqtSignal(str)
+
     def __init__(self):
         q.QObject.__init__(self)
         self.dataframe = pd.DataFrame()
         self._currentIloc = 0
+        self._sourcePath = ""
 
     @property
     def intensityProfiles(self):
@@ -30,27 +35,56 @@ class DataSource(q.QObject):
         return len(self.dataframe)
 
     @property
+    def isEmpty(self):
+        return self.length == 0
+
+    @property
     def currentIntensityProfile(self):
         return self.intensityProfiles.iloc[self.currentIndexLocation]
     
-    
+    def setDataFrame(self,dataframe):
+        self.dataframe = dataframe
+        self.dataChanged.emit(dataframe)
 
+    @property
+    def sourcePath(self):
+        return self._sourcePath
+    
+    def setSourcePath(self,path):
+        self._sourcePath = path
+        self.sourcePathChanged.emit(path)
+
+    def clear(self):
+        self.setDataFrame(pd.DataFrame(columns=["intensityProfile"]))
+        self.setSourcePath("")
 
 
 class SourceReader(q.QObject):
     
-    dataChanged = q.pyqtSignal(pd.DataFrame)
-    sourceChanged = q.pyqtSignal(str)
+    
     statusMessageChanged = q.pyqtSignal(str)
     progressChanged = q.pyqtSignal(int)
     
-    def __init__(self):
+    def __init__(self,dataSource):
+        """
+        Parameters
+        ----------
+
+        dataSource: DataSource
+        """
         super(SourceReader,self).__init__()
         self.data = None
         self._statusMessage = "idle"
         self._progress = None
         self._currentFile = None
+
+        assert isinstance(dataSource,DataSource)
+        self._dataSource = dataSource
         
+    @property
+    def dataSource(self):
+        return self._dataSource
+
     @property
     def statusMessage(self):
         return self._statusMessage
@@ -79,9 +113,8 @@ class SourceReader(q.QObject):
         Override this method to implement the logic for reading from the path. Make sure to call this super method before doing anything else.
         """
         
-        self.data = None
-        self._setCurrentPath(path)
-
+        self._dataSource.clear()
+        
         
 
     @property
@@ -153,14 +186,14 @@ class FeatureTracker(q.QObject):
 
 
 class TrackableFeature(q.QObject):
-    def __init__(self,name):
+    def __init__(self,name,dataSource):
         super(TrackableFeature,self).__init__()
         
         self.name = name
         self.lowerLimit = 0        
         self.upperLimit = 0        
         self._tracker = FeatureTracker()
-        self._dataSource = None
+        self._dataSource = dataSource
         
     @property
     def tracker(self):
@@ -174,19 +207,31 @@ class TrackableFeature(q.QObject):
     def dataSource(self):
         return self._dataSource
 
-    def setSourceData(self,data):
-        self._sourceData = data
+    def setDataSource(self,dataSource):
+        self._sourceData = dataSource
     
 
     def initializeTracker(self):
+        """
+        Initializes the tracker on the currently selected intensityProfile of the dataSource
+        """
+
         self.tracker.initialize()
     
-    def findPosition(self, data):
-        """
-        Searches the data within the limits for the feature using the tracker
-        """
-        self.tracker.findPosition(data[self.slice])
 
+    def locateInCurrent(self):
+        """
+        Searches the currently selected intensity profile of the datasource within the limits for the feature using the tracker
+        """
+        pass
+
+    def locateAll(self):
+        """
+        Searches all the intensityProfiles in the dataSource for the feature
+        """
+        pass
+    
+     
     def setLowerLimit(self,value):
         self.lowerLimit = value
 

@@ -7,8 +7,8 @@ import cv2
 @framework.RegisterSourceReader("Video files", extensions=('avi','mpg'), maxNumberOfFiles=1)
 class VideoReader(lib.SourceReader):
 
-    def __init__(self):
-        lib.SourceReader.__init__(self)
+    def __init__(self,dataSource):
+        lib.SourceReader.__init__(self,dataSource)
         
         self._aoi = (0,0,100,100) #x_left,y_top,width,height
         self.summingAxis = 0
@@ -34,15 +34,14 @@ class VideoReader(lib.SourceReader):
             result, frame = vid.read()
             frameAOIGrayscale = frame[self.aoiSlices[0],self.aoiSlices[1],:].sum(axis=2)
             line = frameAOIGrayscale.sum(axis=self.summingAxis)
-            #self.data.set_value(i,'intensityProfile', line)
+            
             intensityProfiles.append(line)
 
             framesRead += 1
-            self.data = pd.DataFrame(data={'intensityProfile': intensityProfiles, 'timeStep': timeSteps[0:framesRead]})
+            self.dataSource.setDataFrame(pd.DataFrame(data={'intensityProfile': intensityProfiles, 'timeStep': timeSteps[0:framesRead]}))
 
             self._setProgress((framesRead*100)/frameCount)
             self._setStatusMessage("%i frames read" % framesRead)
-            self._emitDataChanged()
 
         
         

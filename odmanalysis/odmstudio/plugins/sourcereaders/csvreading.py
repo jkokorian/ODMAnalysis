@@ -7,8 +7,8 @@ import pandas as pd
 class CsvReader(lib.SourceReader):
     
 
-    def __init__(self):
-        lib.SourceReader.__init__(self)
+    def __init__(self,dataSource):
+        lib.SourceReader.__init__(self,dataSource)
         
 
     def read(self,path):
@@ -31,10 +31,7 @@ class CsvReader(lib.SourceReader):
         
 
     def appendChunkToData(self,chunk):
-        if self.data is None:
-            self.data = chunk
+        if self.dataSource.isEmpty:
+            self.dataSource.setDataFrame(chunk)
         else:
-            self.data = pd.concat([self.data,chunk])
-        
-        self._emitDataChanged()
-        
+            self.dataSource.setDataFrame(pd.concat([self.data,chunk]))        
