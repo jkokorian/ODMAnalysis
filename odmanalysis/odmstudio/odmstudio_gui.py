@@ -1,12 +1,12 @@
-from PyQt4 import QtCore as q
-from PyQt4 import QtGui as qt
+import PyQt4.QtCore as q
+import PyQt4.QtGui as qt
 import pyqtgraph as pg
 import pyqtgraph.dockarea as dock
 import odmanalysis.odmstudio.odmstudio_lib as lib
+import odmanalysis.odmstudio.odmstudio_framework as fw
 import pandas as pd
 import numpy as np
 import os
-from odmanalysis.odmstudio.odmstudio_framework import *
 
 
 
@@ -224,7 +224,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.__trackableFeature = trackableFeature
         self._canDisable = True
         self._featureTrackerIsEnabled = True
-        self.availableFeatureTrackers = FeatureTrackerFactory.getFeatureTrackers()
+        self.availableFeatureTrackers = fw.FeatureTrackerFactory.getFeatureTrackers()
 
 
         #actions
@@ -312,7 +312,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             self.featureTrackerWidget.disconnectPlotWidget()
             self.featureTrackerWidget.setParent(None)
 
-        featureTrackerWidgetType = WidgetFactory.getWidgetClassFor(self.trackableFeature.tracker)
+        featureTrackerWidgetType = fw.WidgetFactory.getWidgetClassFor(self.trackableFeature.tracker)
         if (featureTrackerWidgetType is not None):
             self.featureTrackerWidget = featureTrackerWidgetType(parent=None)
             if (self.featureTrackerWidget is PlotController):
