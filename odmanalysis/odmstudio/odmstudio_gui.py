@@ -263,6 +263,9 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         #connect signals and slots
         self.featureEnabledCheckBox.stateChanged.connect(self.setFeatureTrackerEnabled)
         self.trackerComboBox.currentIndexChanged.connect(self.handleFeatureTrackerSelected)
+
+
+        
         
 
     def connectToPlotWidget(self, plotWidget):
@@ -341,10 +344,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
 
 
 
-class TrackableFeatureControlWidget(qt.QWidget,PlotController):
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
-        PlotController.__init__(self,parent)
+
 
 
 class IntensityProfilePlotWidget(qt.QWidget):
