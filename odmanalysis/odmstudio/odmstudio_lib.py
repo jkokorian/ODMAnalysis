@@ -13,24 +13,25 @@ class DataSource(q.QObject):
     def createDefaultDataFrame(cls):
         return pd.DataFrame(data={"intensityProfile": []})
 
-    dataChanged = q.pyqtSignal(pd.DataFrame)
+    sourceDataChanged = q.pyqtSignal(pd.DataFrame)
+    resultDataChanged = q.pyqtSignal(pd.DataFrame)
     sourcePathChanged = q.pyqtSignal(str)
 
     @property
     def intensityProfiles(self):
-        return self.__dataframe['intensityProfile']
+        return self.__sourceDataframe['intensityProfile']
 
     @property
     def currentIndexLocation(self):
         return self.__currentIloc
     
     @property
-    def length(self):
-        return len(self.__dataframe)
+    def sourceLength(self):
+        return len(self.__sourceDataframe)
 
     @property
-    def isEmpty(self):
-        return self.length == 0
+    def sourceIsEmpty(self):
+        return self.sourceLength == 0
 
     @property
     def currentIntensityProfile(self):
@@ -41,13 +42,13 @@ class DataSource(q.QObject):
         return self.__sourcePath
 
     @property
-    def dataFrame(self):
-        return self.__dataframe
+    def sourceDataFrame(self):
+        return self.__sourceDataframe
     
     
     def __init__(self):
         q.QObject.__init__(self)
-        self.__dataframe = DataSource.createDefaultDataFrame()
+        self.__sourceDataframe = DataSource.createDefaultDataFrame()
         self.__currentIloc = 0
         self.__sourcePath = ""
 
@@ -55,16 +56,16 @@ class DataSource(q.QObject):
     def setCurrentIndexLocation(self,iloc):
         self.__currentIloc = iloc
 
-    def setDataFrame(self,dataframe):
-        self.__dataframe = dataframe
-        self.dataChanged.emit(dataframe)
+    def setSourceDataFrame(self,dataframe):
+        self.__sourceDataframe = dataframe
+        self.sourceDataChanged.emit(dataframe)
 
     def setSourcePath(self,path):
         self.__sourcePath = path
         self.sourcePathChanged.emit(path)
 
     def clear(self):
-        self.setDataFrame(DataSource.createDefaultDataFrame())
+        self.setSourceDataFrame(DataSource.createDefaultDataFrame())
         self.setSourcePath("")
 
 

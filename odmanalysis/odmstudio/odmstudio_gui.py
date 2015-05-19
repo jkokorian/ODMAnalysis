@@ -79,7 +79,7 @@ class FileOpener(qt.QWidget):
 
     
     def showOpenFileDialog(self):
-        extensionsFilter = ";;".join([srr.getFilterString() for srr in SourceReaderFactory.getSourceReaderRegistrations()])
+        extensionsFilter = ";;".join([srr.getFilterString() for srr in fw.SourceReaderFactory.getSourceReaderRegistrations()])
         fileName = qt.QFileDialog.getOpenFileName(parent=None,caption="open file...",directory="",filter=extensionsFilter)
         self.tryOpenFiles([fileName])
 
@@ -96,9 +96,9 @@ class FileOpener(qt.QWidget):
 
         ext = os.path.splitext(paths[0])[-1][1:]
         
-        assert SourceReaderFactory.hasSourceReaderForExtension(ext)
+        assert fw.SourceReaderFactory.hasSourceReaderForExtension(ext)
 
-        srRegistration = SourceReaderFactory.getSourceReaderForExtension(ext)
+        srRegistration = fw.SourceReaderFactory.getSourceReaderForExtension(ext)
 
         assert srRegistration.maxNumberOfFiles >= len(paths)
 
@@ -107,7 +107,7 @@ class FileOpener(qt.QWidget):
         self.sourceReader = srRegistration.sourceReaderType(self.__dataSource)
 
 
-        SRWidget = WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
+        SRWidget = fw.WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
         
 
         if SRWidget is not None:
@@ -297,7 +297,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.locateAllAction.triggered.connect(self.trackableFeature.locateAll)
         self.locateInCurrentAction.triggered.connect(self.trackableFeature.locateInCurrent)
 
-        self.trackableFeature.dataSource.dataChanged.connect(self.updateSpinBoxLimits)
+        self.trackableFeature.dataSource.sourceDataChanged.connect(self.updateSpinBoxLimits)
 
     @property
     def trackableFeature(self):
@@ -365,7 +365,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
     
     def updateSpinBoxLimits(self):
         spinBoxes = [self.lowerLimitSpinBox,self.upperLimitSpinBox]
-        if (self.trackableFeature.dataSource.isEmpty):
+        if (self.trackableFeature.dataSource.sourceIsEmpty):
             for spinBox in spinBoxes:
                 spinBox.setDisabled(True)
         else:
@@ -425,19 +425,19 @@ class IntensityProfilePlotWidget(qt.QWidget):
         self.stepSpinBox.valueChanged.connect(self.showStep)
         self.stepSpinBox.valueChanged.connect(self.stepSlider.setValue)
         
-        self.dataSource.dataChanged.connect(self._updateControlLimits)
+        self.dataSource.sourceDataChanged.connect(self._updateControlLimits)
         
 
     
     
     def _updateControlLimits(self):
         self.stepSlider.setMinimum(0)
-        self.stepSlider.setMaximum(self.dataSource.length - 1)
+        self.stepSlider.setMaximum(self.dataSource.sourceLength - 1)
         self.stepSpinBox.setMinimum(0)
-        self.stepSpinBox.setMaximum(self.dataSource.length - 1)
+        self.stepSpinBox.setMaximum(self.dataSource.sourceLength - 1)
     
     def showStep(self,stepNumber):
-        if self.dataSource.length > 0:
+        if self.dataSource.sourceLength > 0:
             ip = self.dataSource.intensityProfiles.iloc[stepNumber]
             ip = ip - ip.mean()
         

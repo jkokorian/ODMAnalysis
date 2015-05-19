@@ -31,7 +31,7 @@ class CsvReader(lib.SourceReader):
         
 
     def appendChunkToData(self,chunk):
-        if self.dataSource.isEmpty:
-            self.dataSource.setDataFrame(chunk)
+        if self.dataSource.sourceIsEmpty:
+            self.dataSource.setSourceDataFrame(chunk)
         else:
-            self.dataSource.setDataFrame(pd.concat([self.dataSource.dataFrame,chunk]))        
+            self.dataSource.setSourceDataFrame(pd.concat([self.dataSource.sourceDataFrame,chunk]))        

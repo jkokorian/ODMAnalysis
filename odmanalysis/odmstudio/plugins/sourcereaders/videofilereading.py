@@ -38,7 +38,7 @@ class VideoReader(lib.SourceReader):
             intensityProfiles.append(line)
 
             framesRead += 1
-            self.dataSource.setDataFrame(pd.DataFrame(data={'intensityProfile': intensityProfiles, 'timeStep': timeSteps[0:framesRead]}))
+            self.dataSource.setSourceDataFrame(pd.DataFrame(data={'intensityProfile': intensityProfiles, 'timeStep': timeSteps[0:framesRead]}))
 
             self._setProgress((framesRead*100)/frameCount)
             self._setStatusMessage("%i frames read" % framesRead)
