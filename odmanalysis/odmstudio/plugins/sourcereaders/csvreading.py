@@ -34,4 +34,4 @@ class CsvReader(lib.SourceReader):
         if self.dataSource.isEmpty:
             self.dataSource.setDataFrame(chunk)
         else:
-            self.dataSource.setDataFrame(pd.concat([self.data,chunk]))        
+            self.dataSource.setDataFrame(pd.concat([self.dataSource.dataFrame,chunk]))        

@@ -3,36 +3,30 @@ from PyQt4 import QtGui as qt
 import pandas as pd
 import numpy as np
 import odmanalysis as odm
-from functools import wraps
-from odmstudio_framework import RegisterSourceReader
+from odmanalysis.odmstudio.odmstudio_framework import RegisterSourceReader
 import cv2
    
     
 class DataSource(q.QObject):
+    
+    @classmethod
+    def createDefaultDataFrame(cls):
+        return pd.DataFrame(data={"intensityProfile": []})
 
     dataChanged = q.pyqtSignal(pd.DataFrame)
     sourcePathChanged = q.pyqtSignal(str)
 
-    def __init__(self):
-        q.QObject.__init__(self)
-        self.dataframe = pd.DataFrame()
-        self._currentIloc = 0
-        self._sourcePath = ""
-
     @property
     def intensityProfiles(self):
-        return self.dataframe['intensityProfiles']
+        return self.__dataframe['intensityProfile']
 
     @property
     def currentIndexLocation(self):
-        return self._currentIloc
-
-    def setCurrentIndexLocation(self,iloc):
-        self._currentIloc = iloc
-
+        return self.__currentIloc
+    
     @property
     def length(self):
-        return len(self.dataframe)
+        return len(self.__dataframe)
 
     @property
     def isEmpty(self):
@@ -42,20 +36,35 @@ class DataSource(q.QObject):
     def currentIntensityProfile(self):
         return self.intensityProfiles.iloc[self.currentIndexLocation]
     
-    def setDataFrame(self,dataframe):
-        self.dataframe = dataframe
-        self.dataChanged.emit(dataframe)
-
     @property
     def sourcePath(self):
-        return self._sourcePath
+        return self.__sourcePath
+
+    @property
+    def dataFrame(self):
+        return self.__dataframe
     
+    
+    def __init__(self):
+        q.QObject.__init__(self)
+        self.__dataframe = DataSource.createDefaultDataFrame()
+        self.__currentIloc = 0
+        self.__sourcePath = ""
+
+
+    def setCurrentIndexLocation(self,iloc):
+        self.__currentIloc = iloc
+
+    def setDataFrame(self,dataframe):
+        self.__dataframe = dataframe
+        self.dataChanged.emit(dataframe)
+
     def setSourcePath(self,path):
-        self._sourcePath = path
+        self.__sourcePath = path
         self.sourcePathChanged.emit(path)
 
     def clear(self):
-        self.setDataFrame(pd.DataFrame(columns=["intensityProfile"]))
+        self.setDataFrame(DataSource.createDefaultDataFrame())
         self.setSourcePath("")
 
 
@@ -79,11 +88,11 @@ class SourceReader(q.QObject):
         self._currentFile = None
 
         assert isinstance(dataSource,DataSource)
-        self._dataSource = dataSource
+        self.__dataSource = dataSource
         
     @property
     def dataSource(self):
-        return self._dataSource
+        return self.__dataSource
 
     @property
     def statusMessage(self):
@@ -113,7 +122,7 @@ class SourceReader(q.QObject):
         Override this method to implement the logic for reading from the path. Make sure to call this super method before doing anything else.
         """
         
-        self._dataSource.clear()
+        self.__dataSource.clear()
         
         
 
@@ -193,6 +202,7 @@ class TrackableFeature(q.QObject):
         self.lowerLimit = 0        
         self.upperLimit = 0        
         self._tracker = FeatureTracker()
+        assert isinstance(dataSource,DataSource)
         self._dataSource = dataSource
         
     @property
@@ -216,14 +226,14 @@ class TrackableFeature(q.QObject):
         Initializes the tracker on the currently selected intensityProfile of the dataSource
         """
 
-        self.tracker.initialize()
+        self.tracker.initialize(self.dataSource.currentIntensityProfile)
     
 
     def locateInCurrent(self):
         """
         Searches the currently selected intensity profile of the datasource within the limits for the feature using the tracker
         """
-        pass
+        self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
 
     def locateAll(self):
         """

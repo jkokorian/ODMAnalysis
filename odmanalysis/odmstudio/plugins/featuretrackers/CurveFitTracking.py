@@ -2,7 +2,6 @@ from odmanalysis.odmstudio import odmstudio_lib as lib
 from odmanalysis.odmstudio import odmstudio_framework as fw
 from odmanalysis.odmstudio.odmstudio_gui import PlotController
 from odmanalysis.fitfunctions import ScaledSpline
-from PyQt4 import QtCore as q
 from PyQt4 import QtGui as qt
 from scipy.optimize import curve_fit
 import numpy as np
@@ -23,10 +22,9 @@ class SimpleSplineTracker(lib.FeatureTracker):
         valuesDict = self.fitFunction.estimateInitialParameters(intensityProfile)
         self.p0 = valuesDict.values()
         self.xValues = np.arange(len(intensityProfile))
-        
-    
+                    
     def findNextPosition(self,intensityProfile):
-        popt,pcov = curve_fit(self.xValues[self.rangeSlice],intensityProfile[self.rangeSlice],self.p0)
+        popt,pcov = curve_fit(self.fitFunction, self.xValues[self.rangeSlice],intensityProfile[self.rangeSlice],self.p0,maxfev=10000)
         self.p0 = popt
         return self.fitFunction.getDisplacement(*popt)
 

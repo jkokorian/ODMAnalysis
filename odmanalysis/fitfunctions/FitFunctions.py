@@ -256,9 +256,11 @@ class ScaledSpline(DisplacementFitFunction):
         xValues = np.arange(len(intensityProfile))
         yValues = gaussian_filter(intensityProfile,filter_sigma)
         self.spline = InterpolatedUnivariateSpline(xValues, yValues)
-        return {'x0': 0.0,
-                'A': 1.0,
-                'a0': 0.0}
+        valuesDict = OrderedDict()
+        valuesDict['x0'] = 0.0
+        valuesDict['A'] = 1.0
+        valuesDict['a0'] = 0.0
+        return valuesDict
         
     def getDisplacement(self,x0,A,a0):
         return x0
@@ -282,9 +284,11 @@ class ScaledSpline1(DisplacementFitFunction):
         xValues = np.arange(len(intensityProfile))
         yValues = gaussian_filter(intensityProfile,filter_sigma)
         self.spline = InterpolatedUnivariateSpline(xValues, yValues)
-        return {'x0': 0.0,
-                'A': 1.0,
-                'a0': 0.0}
+        valuesDict = OrderedDict()
+        valuesDict['x0'] = 0.0
+        valuesDict['A'] = 1.0
+        valuesDict['a0'] = 0.0
+        return valuesDict
         
     def getDisplacement(self,x0,A,a0):
         return x0
@@ -360,9 +364,11 @@ class BoundedSpline(DisplacementFitFunction):
         
         self.ymin = self.spline(xmin)
         self.ymax = self.spline(xmax)
-        return {'x0': 0.0,
-                'A': 1.0,
-                'a0': 0.0}
+        valuesDict = OrderedDict()
+        valuesDict['x0'] = 0.0
+        valuesDict['A'] = 1.0
+        valuesDict['a0'] = 0.0
+        return valuesDict
         
     def getDisplacement(self,x0,A,a0):
         return x0

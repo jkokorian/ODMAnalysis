@@ -2,7 +2,7 @@ from PyQt4 import QtCore as q
 from PyQt4 import QtGui as qt
 import pyqtgraph as pg
 import pyqtgraph.dockarea as dock
-import odmstudio_lib as lib
+import odmanalysis.odmstudio.odmstudio_lib as lib
 import pandas as pd
 import numpy as np
 import os
@@ -12,7 +12,7 @@ from odmanalysis.odmstudio.odmstudio_framework import *
 
 class PlotController(q.QObject):
     """
-    Base class for anything that can control a pyqtgraph plot
+    Mixin class for anything that can control a pyqtgraph plot
     """
 
     def __init__(self,parent=None):
@@ -49,9 +49,6 @@ class FileOpener(qt.QWidget):
     Takes care of creating and destroying sourcereader objects and their corresponding gui widgets.
     """
 
-    sourceReaderChanged = q.pyqtSignal(lib.SourceReader)
-    dataChanged = q.pyqtSignal(pd.DataFrame)
-    sourcePathChanged = q.pyqtSignal(str)
     progressChanged = q.pyqtSignal(int)
     statusMessageChanged = q.pyqtSignal(str)
 
@@ -107,7 +104,7 @@ class FileOpener(qt.QWidget):
 
 
         #set source reader
-        self.sourceReader = srRegistration.sourceReaderType(self.__dataSource);
+        self.sourceReader = srRegistration.sourceReaderType(self.__dataSource)
 
 
         SRWidget = WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
@@ -120,48 +117,14 @@ class FileOpener(qt.QWidget):
         else:
             self.sourceReaderWidget = None
             
-            # if there is no widget defined for the target SourceReader, read the files to open immediately
+            # if there is no widget defined for the target SourceReader, read
+            # the files to open immediately
             if len(paths) == 1:
                 self.__readerThread = self.sourceReader.readAsync(paths[0])
             else:
                 self.__readerThread = self.sourceReader.readAsync(paths)
             
                 
-     
-    @property
-    def sourceReader(self):
-        return self.__sourceReader;
-
-    @sourceReader.setter
-    def sourceReader(self,sourceReader):
-        #disconnect current sourcereader
-        if self.__sourceReader is not None:
-            self.__sourceReader.dataChanged.disconnect(self.__sourceReader_dataChanged)
-            self.__sourceReader.sourceChanged.disconnect(self.__sourceReader_sourceChanged)
-            self.__sourceReader.statusMessageChanged.disconnect(self._setStatusMessage)
-            self.__sourceReader.progressChanged.disconnect(self.__sourceReader_progressChanged)
-        
-        #connect new sourcereader
-        self.__sourceReader = sourceReader;
-        self.__sourceReader.dataChanged.connect(self.__sourceReader_dataChanged)
-        self.__sourceReader.sourceChanged.connect(self.__sourceReader_sourceChanged)
-        self.__sourceReader.statusMessageChanged.connect(self._setStatusMessage)
-        self.__sourceReader.progressChanged.connect(self.__sourceReader_progressChanged)
-
-        self.sourceReaderChanged.emit(self.__sourceReader)
-    
-    def __sourceReader_dataChanged(self,df):
-        self.dataChanged.emit(df)
-
-    def __sourceReader_sourceChanged(self,path):
-        self.sourcePathChanged.emit(path)
-
-    def __sourceReader_statusMessageChanged(self,message):
-        self.statusMessageChanged.emit(message)
-
-    def __sourceReader_progressChanged(self,progress):
-        self.progressChanged.emit(progress)
-
     @property
     def statusMessage(self):
         return self.__statusMessage
@@ -169,6 +132,40 @@ class FileOpener(qt.QWidget):
     def _setStatusMessage(self,message):
         self.__statusMessage = message
         self.statusMessageChanged.emit(message)
+     
+    @property
+    def sourceReader(self):
+        return self.__sourceReader
+
+    @sourceReader.setter
+    def sourceReader(self,sourceReader):
+
+        #disconnect current sourcereader
+        if self.__sourceReader is not None:
+            self.__sourceReader.statusMessageChanged.disconnect(self._setStatusMessage)
+            self.__sourceReader.progressChanged.disconnect(self.__sourceReader_progressChanged)
+        
+        #connect new sourcereader
+        self.__sourceReader = sourceReader
+        self.__sourceReader.statusMessageChanged.connect(self._setStatusMessage)
+        self.__sourceReader.progressChanged.connect(self.__sourceReader_progressChanged)
+
+    
+    @property
+    def dataSource(self):
+        return self.__dataSource
+
+    def _setDataSource(self,dataSource):
+        assert isinstance(dataSource,lib.DataSource)
+        self.__dataSource = dataSource
+
+
+    def __sourceReader_statusMessageChanged(self,message):
+        self.statusMessageChanged.emit(message)
+
+    def __sourceReader_progressChanged(self,progress):
+        self.progressChanged.emit(progress)
+
 
                 
          
@@ -181,13 +178,13 @@ class FeatureTrackerControlsWidget(qt.QWidget):
 
         self._featureTracker = featureTracker
 
-        layout = qt.QHBoxLayout()
         
 
         self.initializeAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_BrowserReload),"Initialize",self)
         self.findInCurrentProfileAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaPlay),"Find in current profile",self)
         self.findInAllProfilesAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaSeekForward),"Find in all profiles",self)
 
+        layout = qt.QHBoxLayout()
         self.initializeButton = qt.QToolButton(self)
         self.initializeButton.setDefaultAction(self.initializeAction)
         self.findInCurrentProfileButton = qt.QToolButton(self)
@@ -223,17 +220,27 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
     def __init__(self,trackableFeature,parent=None):
         qt.QWidget.__init__(self,parent)
         PlotController.__init__(self,parent)
-        self._trackableFeature = trackableFeature
+        assert isinstance(trackableFeature, lib.TrackableFeature)
+        self.__trackableFeature = trackableFeature
         self._canDisable = True
         self._featureTrackerIsEnabled = True
+        self.availableFeatureTrackers = FeatureTrackerFactory.getFeatureTrackers()
 
 
+        #actions
+        self.initializeTrackerAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_BrowserReload),"Initialize",self)
+        self.locateInCurrentAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaPlay),"Find in current profile",self)
+        self.locateAllAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaSeekForward),"Find in all profiles",self)
+
+        #main layout
         layout = qt.QVBoxLayout()
         
+        #featureEnabledCheckBox
         self.featureEnabledCheckBox = qt.QCheckBox("Enable")
         self.featureEnabledCheckBox.setChecked(True)
         layout.addWidget(self.featureEnabledCheckBox)
 
+        #upper and lower limit SpinBoxes
         hLayout = qt.QHBoxLayout()
         self.lowerLimitSpinBox = qt.QSpinBox()
         self.upperLimitSpinBox = qt.QSpinBox()
@@ -241,32 +248,76 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         hLayout.addWidget(self.upperLimitSpinBox)
         layout.addLayout(hLayout)
 
-        self.trackerComboBox = qt.QComboBox()
-        layout.addWidget(self.trackerComboBox)
+        #featureTrackerComboBox
+        self.featureTrackerComboBox = qt.QComboBox()
+        layout.addWidget(self.featureTrackerComboBox)
+        for tracker in self.availableFeatureTrackers:
+            self.featureTrackerComboBox.addItem(tracker.getDisplayName())
+        
 
+        #featureTrackerWidgetContainer
         self.featureTrackerWidgetContainer = qt.QGridLayout()
         self.featureTrackerWidget = None
-        self.availableFeatureTrackers = FeatureTrackerFactory.getFeatureTrackers()
-        
-        for tracker in self.availableFeatureTrackers:
-            self.trackerComboBox.addItem(tracker.getDisplayName())
-                
-
         layout.addLayout(self.featureTrackerWidgetContainer)
         
-        self.featureTrackerControlsWidget = FeatureTrackerControlsWidget(self)
-        layout.addWidget(self.featureTrackerControlsWidget)
+
+        #featureTrackerControls
+        buttonsLayout = qt.QHBoxLayout()
+        self.initializeButton = qt.QToolButton(self)
+        self.initializeButton.setDefaultAction(self.initializeTrackerAction)
+        self.findInCurrentProfileButton = qt.QToolButton(self)
+        self.findInCurrentProfileButton.setDefaultAction(self.locateInCurrentAction)
+        self.findInAllProfilesButton = qt.QToolButton(self)
+        self.findInAllProfilesButton.setDefaultAction(self.locateAllAction)
+        
+        
+        buttonsLayout.addStretch()
+        buttonsLayout.addWidget(self.initializeButton)
+        buttonsLayout.addWidget(self.findInCurrentProfileButton)
+        buttonsLayout.addWidget(self.findInAllProfilesButton)
+        layout.addLayout(buttonsLayout)
+
+        
+        
         self.setLayout(layout)
         
+        self.setFeatureTracker()
+
+
         
-        self.updateFeatureTrackerWidget()
+
 
         #connect signals and slots
         self.featureEnabledCheckBox.stateChanged.connect(self.setFeatureTrackerEnabled)
-        self.trackerComboBox.currentIndexChanged.connect(self.handleFeatureTrackerSelected)
+        self.featureTrackerComboBox.currentIndexChanged.connect(self.setFeatureTracker)
+        self.lowerLimitSpinBox.valueChanged.connect(self.trackableFeature.setLowerLimit)
+        self.upperLimitSpinBox.valueChanged.connect(self.trackableFeature.setUpperLimit)
 
+        self.initializeTrackerAction.triggered.connect(self.trackableFeature.initializeTracker)
+        self.locateAllAction.triggered.connect(self.trackableFeature.locateAll)
+        self.locateInCurrentAction.triggered.connect(self.trackableFeature.locateInCurrent)
+
+        self.trackableFeature.dataSource.dataChanged.connect(self.updateSpinBoxLimits)
+
+    @property
+    def trackableFeature(self):
+        return self.__trackableFeature
 
         
+    def setFeatureTracker(self):
+        self.trackableFeature.setTracker(self.availableFeatureTrackers[self.featureTrackerComboBox.currentIndex()]())
+        
+        if (self.featureTrackerWidget is not None):
+            self.featureTrackerWidgetContainer.removeWidget(self.featureTrackerWidget)
+            self.featureTrackerWidget.disconnectPlotWidget()
+            self.featureTrackerWidget.setParent(None)
+
+        featureTrackerWidgetType = WidgetFactory.getWidgetClassFor(self.trackableFeature.tracker)
+        if (featureTrackerWidgetType is not None):
+            self.featureTrackerWidget = featureTrackerWidgetType(parent=None)
+            if (self.featureTrackerWidget is PlotController):
+                self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
+            self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
         
 
     def connectToPlotWidget(self, plotWidget):
@@ -278,8 +329,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
     def createPlotRegion(self):
         self.region = pg.LinearRegionItem(brush=pg.intColor(1,alpha=100))
         self.region.setZValue(10)
-        self.regionLabel = pg.TextItem(self._trackableFeature.name,color=pg.intColor(1),
-                                                 anchor=(0,1))
+        self.regionLabel = pg.TextItem(self.trackableFeature.name, color=pg.intColor(1), anchor=(0,1))
         self.regionLabel.setX(self.region.getRegion()[0])
         self.plotWidget.addItem(self.regionLabel)                
         self.plotWidget.addItem(self.region, ignoreBounds=True)
@@ -295,23 +345,9 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.lowerLimitSpinBox.setValue(r.getRegion()[0])
         self.upperLimitSpinBox.setValue(r.getRegion()[1])
 
-    def updateFeatureTrackerWidget(self):
-        if (self.featureTrackerWidget is not None):
-            self.featureTrackerWidgetContainer.removeWidget(self.featureTrackerWidget)
-            self.featureTrackerWidget.disconnectPlotWidget()
-            self.featureTrackerWidget.setParent(None)
-
-        self.featureTracker = self.availableFeatureTrackers[self.trackerComboBox.currentIndex()]
-        featureTrackerWidgetType = WidgetFactory.getWidgetClassFor(self.featureTracker)
-        if (featureTrackerWidgetType is not None):
-            self.featureTrackerWidget = featureTrackerWidgetType(parent=None)
-            if (self.featureTrackerWidget is PlotController):
-                self.featureTrackerWidget.connectToPlotWidget(self.plotWidget)
-            self.featureTrackerWidgetContainer.addWidget(self.featureTrackerWidget)
         
     def handleFeatureTrackerSelected(self):
-        self.featureTrackerControlsWidget.setFeatureTracker(self.featureTracker)
-        self.updateFeatureTrackerWidget()
+        self.setFeatureTracker()
 
     def setCanDisable(self,canDisable):
         """
@@ -326,19 +362,18 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self._featureTrackerIsEnabled = (enabled == True)
 
 
-    def setSourceData(self,dataframe):
-        self._sourceData = dataframe
-        self.updateFormElements()
-        
-        
-    def getSourceData(self):
-        return self._sourceData
-
-    def updateFormElements(self):
-        if (self._sourceData is not None):
-            xMaximum = len(self._sourceData.intensityProfile.iloc[0])
-            self.lowerLimitSpinBox.setMaximum(xMaximum)
-            self.upperLimitSpinBox.setMaximum(xMaximum)
+    
+    def updateSpinBoxLimits(self):
+        spinBoxes = [self.lowerLimitSpinBox,self.upperLimitSpinBox]
+        if (self.trackableFeature.dataSource.isEmpty):
+            for spinBox in spinBoxes:
+                spinBox.setDisabled(True)
+        else:
+            for spinBox in spinBoxes:
+                spinBox.setEnabled(True)
+                xMaximum = len(self.trackableFeature.dataSource.intensityProfiles.iloc[0])
+                spinBox.setMaximum(xMaximum)
+                
 
 
     
@@ -350,9 +385,15 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
 
 class IntensityProfilePlotWidget(qt.QWidget):
 
-    def __init__(self,parent=None):        
+    @property
+    def dataSource(self):
+        return self.__dataSource
+
+    def __init__(self,dataSource,parent=None):        
         qt.QWidget.__init__(self,parent)
         
+        assert isinstance(dataSource,lib.DataSource)
+        self.__dataSource = dataSource
         
         layout = qt.QVBoxLayout()        
         self.setLayout(layout)
@@ -375,13 +416,7 @@ class IntensityProfilePlotWidget(qt.QWidget):
         
         self.__initializePlots() 
 
-        df = pd.DataFrame(data={'intensityProfile': []})
-        
-        
-        self.df = df
-
         self._updateControlLimits()
-
         
 
         # connect signals
@@ -390,23 +425,28 @@ class IntensityProfilePlotWidget(qt.QWidget):
         self.stepSpinBox.valueChanged.connect(self.showStep)
         self.stepSpinBox.valueChanged.connect(self.stepSlider.setValue)
         
+        self.dataSource.dataChanged.connect(self._updateControlLimits)
+        
 
+    
+    
     def _updateControlLimits(self):
         self.stepSlider.setMinimum(0)
-        self.stepSlider.setMaximum(len(self.df) - 1)
+        self.stepSlider.setMaximum(self.dataSource.length - 1)
         self.stepSpinBox.setMinimum(0)
-        self.stepSpinBox.setMaximum(len(self.df) - 1)
+        self.stepSpinBox.setMaximum(self.dataSource.length - 1)
     
     def showStep(self,stepNumber):
-        df = self.df
-        ip = df.intensityProfile.iloc[stepNumber]
-        ip = ip - ip.mean()
+        if self.dataSource.length > 0:
+            ip = self.dataSource.intensityProfiles.iloc[stepNumber]
+            ip = ip - ip.mean()
         
-        self.dataPlot.setData(x=np.arange(len(ip)),y=ip)
+            self.dataPlot.setData(x=np.arange(len(ip)),y=ip)
         
         
     def __initializePlots(self):
         pw = self.plotWidget
+        
         self.dataPlot = pw.plot()
         self.dataPlot.setPen((200,200,100))
         
@@ -423,13 +463,7 @@ class IntensityProfilePlotWidget(qt.QWidget):
         
         pw.setAutoVisible(y=True)
     
-    def setSourceData(self,dataframe):
-        """
-        Set the data source for plotting.
-        """
-        self.df = dataframe
-        self._updateControlLimits()
-
+    
 
         
     #def updateGraphData(self, fitFunction_mp, popt_mp,
@@ -437,11 +471,18 @@ class IntensityProfilePlotWidget(qt.QWidget):
     #    self.movingPeakFitPlot.setData(x=self.xValues,y=fitFunction_mp(self.xValues,*popt_mp))
         
     #    self.referencePeakFitPlot.setData(x=self.xValues,y=fitFunction_ref(self.xValues,*popt_ref))
-    
-
 class DisplacementPlotWidget(qt.QWidget):
-    def __init__(self,parent=None):
-        qt.QWidget.__init__(self,parent)
+
+    @property
+    def dataSource(self):
+        return self.__dataSource
+
+    def __init__(self, dataSource, parent=None):
+        qt.QWidget.__init__(self, parent)
+
+        assert isinstance(dataSource,lib.DataSource)
+        self.__dataSource = dataSource
+
         layout = qt.QVBoxLayout()
 
         self.plotWidget = pg.PlotWidget()
@@ -453,30 +494,36 @@ class ODMStudioMainWindow(qt.QMainWindow):
 
     filesDropped = q.pyqtSignal(list)
 
+    @property
+    def dataSource(self):
+        return self.__dataSource
+
     def __init__(self,parent=None):
         qt.QMainWindow.__init__(self,parent)
         
+        self.__dataSource = lib.DataSource()
+
         self.setWindowTitle("ODM Studio")
         self.resize(800,600)
         self.setAcceptDrops(True)
 
-        area=dock.DockArea()
+        area = dock.DockArea()
         self.dockArea = area
         self.setCentralWidget(area)
 
 
-        self.displacementPlot = DisplacementPlotWidget(self)
-        self.fileOpener = FileOpener(self)
-        self.intensityProfilePlot = IntensityProfilePlotWidget(self)
+        self.displacementPlot = DisplacementPlotWidget(self.dataSource, parent=self)
+        self.fileOpener = FileOpener(self.dataSource, parent=self)
+        self.intensityProfilePlot = IntensityProfilePlotWidget(self.dataSource, parent=self)
 
-        movingFeature = lib.TrackableFeature("moving feature")
-        referenceFeature = lib.TrackableFeature("reference feature")        
+        movingFeature = lib.TrackableFeature("moving feature", self.dataSource)
+        referenceFeature = lib.TrackableFeature("reference feature", self.dataSource)        
         
-        self.movingFeatureWidget = TrackableFeatureWidget(movingFeature,parent=self)
-        self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature,parent=self)
+        self.movingFeatureWidget = TrackableFeatureWidget(movingFeature, parent=self)
+        self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature, parent=self)
         self.movingFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
         self.referenceFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
-
+        
         
         
         intensityProfileDock = dock.Dock("Intensity Profiles", size=(500, 500))     ## give this dock the minimum possible size
@@ -505,10 +552,7 @@ class ODMStudioMainWindow(qt.QMainWindow):
         #connect signals and slots
         self.filesDropped.connect(self.fileOpener.tryOpenFiles)
         
-        self.fileOpener.dataChanged.connect(self.intensityProfilePlot.setSourceData)
-        self.fileOpener.dataChanged.connect(self.movingFeatureWidget.setSourceData)
-        self.fileOpener.dataChanged.connect(self.referenceFeatureWidget.setSourceData)
-        self.fileOpener.sourcePathChanged.connect(self.setWindowTitle)
+        self.dataSource.sourcePathChanged.connect(self.setWindowTitle)
         self.fileOpener.statusMessageChanged.connect(self.logMessage)
         self.fileOpener.progressChanged.connect(self.logProgress)
 
