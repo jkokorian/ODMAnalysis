@@ -74,6 +74,23 @@ class SourceReader(q.QObject):
     statusMessageChanged = q.pyqtSignal(str)
     progressChanged = q.pyqtSignal(int)
     
+    @property
+    def dataSource(self):
+        return self.__dataSource
+
+    @property
+    def statusMessage(self):
+        return self._statusMessage
+        
+    @property
+    def currentPath(self):
+        return self._currentPath
+
+    @property
+    def progress(self):
+        return self._progress
+
+    
     def __init__(self,dataSource):
         """
         Parameters
@@ -90,22 +107,9 @@ class SourceReader(q.QObject):
         assert isinstance(dataSource,DataSource)
         self.__dataSource = dataSource
         
-    @property
-    def dataSource(self):
-        return self.__dataSource
-
-    @property
-    def statusMessage(self):
-        return self._statusMessage
-        
-    
     def _setStatusMessage(self,message):
         self._statusMessage = message
         self.statusMessageChanged.emit(message)
-
-    @property
-    def progress(self):
-        return self._progress
 
     def _setProgress(self,progress):
         self._progress = progress
@@ -125,10 +129,6 @@ class SourceReader(q.QObject):
         self.__dataSource.clear()
         
         
-
-    @property
-    def currentPath(self):
-        return self._currentPath
 
     def _setCurrentPath(self,path):
         self._currentPath = path
@@ -168,11 +168,14 @@ class FeatureTracker(q.QObject):
     def getDisplayName(cls):
         return str(cls)
 
+    @property
+    def rangeSlice(self):
+        return slice(self.xmin,self.xmax)
+    
     def __init__(self):
         q.QObject.__init__(self)
         self.xmin = None
         self.xmax = None
-        
     
     def findNextPosition(self,intensityProfile):
         raise NotImplemented("Implement this method in child class")
@@ -186,15 +189,21 @@ class FeatureTracker(q.QObject):
     def setXmax(self,value):
         self.xmax = value
 
-    @property
-    def rangeSlice(self):
-        return slice(self.xmin,self.xmax)
 
     
 
 
 
 class TrackableFeature(q.QObject):
+    
+    @property
+    def tracker(self):
+        return self._tracker
+
+    @property
+    def dataSource(self):
+        return self._dataSource
+
     def __init__(self,name,dataSource):
         super(TrackableFeature,self).__init__()
         
@@ -205,17 +214,10 @@ class TrackableFeature(q.QObject):
         assert isinstance(dataSource,DataSource)
         self._dataSource = dataSource
         
-    @property
-    def tracker(self):
-        return self._tracker
     
     def setTracker(self,tracker):
         self._tracker = tracker
     
-
-    @property
-    def dataSource(self):
-        return self._dataSource
 
     def setDataSource(self,dataSource):
         self._sourceData = dataSource
