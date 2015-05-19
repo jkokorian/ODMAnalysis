@@ -8,6 +8,34 @@ from odmstudio_framework import RegisterSourceReader
 import cv2
    
     
+class DataSource(q.QObject):
+    def __init__(self):
+        q.QObject.__init__(self)
+        self.dataframe = pd.DataFrame()
+        self._currentIloc = 0
+
+    @property
+    def intensityProfiles(self):
+        return self.dataframe['intensityProfiles']
+
+    @property
+    def currentIndexLocation(self):
+        return self._currentIloc
+
+    def setCurrentIndexLocation(self,iloc):
+        self._currentIloc = iloc
+
+    @property
+    def length(self):
+        return len(self.dataframe)
+
+    @property
+    def currentIntensityProfile(self):
+        return self.intensityProfiles.iloc[self.currentIndexLocation]
+    
+    
+
+
 
 class SourceReader(q.QObject):
     
@@ -132,6 +160,7 @@ class TrackableFeature(q.QObject):
         self.lowerLimit = 0        
         self.upperLimit = 0        
         self._tracker = FeatureTracker()
+        self._dataSource = None
         
     @property
     def tracker(self):
@@ -140,7 +169,17 @@ class TrackableFeature(q.QObject):
     def setTracker(self,tracker):
         self._tracker = tracker
     
+
+    @property
+    def dataSource(self):
+        return self._dataSource
+
+    def setSourceData(self,data):
+        self._sourceData = data
     
+
+    def initializeTracker(self):
+        self.tracker.initialize()
     
     def findPosition(self, data):
         """
