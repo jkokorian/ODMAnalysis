@@ -81,7 +81,8 @@ class FileOpener(qt.QWidget):
     def showOpenFileDialog(self):
         extensionsFilter = ";;".join([srr.getFilterString() for srr in fw.SourceReaderFactory.getSourceReaderRegistrations()])
         fileName = qt.QFileDialog.getOpenFileName(parent=None,caption="open file...",directory="",filter=extensionsFilter)
-        self.tryOpenFiles([fileName])
+        if fileName:
+            self.tryOpenFiles([fileName])
 
     def tryOpenFiles(self,paths):
         try:
@@ -292,6 +293,8 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.featureTrackerComboBox.currentIndexChanged.connect(self.setFeatureTracker)
         self.lowerLimitSpinBox.valueChanged.connect(self.trackableFeature.setLowerLimit)
         self.upperLimitSpinBox.valueChanged.connect(self.trackableFeature.setUpperLimit)
+        self.lowerLimitSpinBox.valueChanged.connect(self.updateRegionLimits)
+        self.upperLimitSpinBox.valueChanged.connect(self.updateRegionLimits)
 
         self.initializeTrackerAction.triggered.connect(self.trackableFeature.initializeTracker)
         self.locateAllAction.triggered.connect(self.trackableFeature.locateAll)
@@ -334,16 +337,27 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.plotWidget.addItem(self.regionLabel)                
         self.plotWidget.addItem(self.region, ignoreBounds=True)
         self.region.sigRegionChanged.connect(self.region_RegionChanged)
+        self.region.sigRegionChangeFinished.connect(self.region_RegionChangeFinished)
 
     def disconnectPlotWidget(self):
         self.region.sigRegionChanged.disconnect(self.region_RegionChanged)
         return super(TrackableFeatureWidget, self).disconnectPlotWidget()
         
+    def region_RegionChangeFinished(self,r):
+        pass
 
     def region_RegionChanged(self, r):
         self.regionLabel.setX(r.getRegion()[0])
-        self.lowerLimitSpinBox.setValue(r.getRegion()[0])
-        self.upperLimitSpinBox.setValue(r.getRegion()[1])
+        if (self.lowerLimitSpinBox.value() != r.getRegion()[0]):
+            self.lowerLimitSpinBox.setValue(r.getRegion()[0])
+        if (self.upperLimitSpinBox.value() != r.getRegion()[1]):
+            self.upperLimitSpinBox.setValue(r.getRegion()[1])
+
+    def updateRegionLimits(self):
+        if (self.lowerLimitSpinBox.hasFocus() or self.upperLimitSpinBox.hasFocus()):
+            self.region.setRegion((self.lowerLimitSpinBox.value(),self.upperLimitSpinBox.value()))
+
+    
 
         
     def handleFeatureTrackerSelected(self):

@@ -24,6 +24,9 @@
     <Compile Include="FeatureTrackerTests.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="observable.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="odmstudio_app.py">
       <SubType>Code</SubType>
     </Compile>

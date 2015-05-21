@@ -108,7 +108,7 @@ class DataSource(q.QObject):
         return self.__resultArrays[name]
 
     def refreshResults(self):
-        pass
+        self.resultDataChanged.emit(self.resultsDataFrame)
 
             
 
