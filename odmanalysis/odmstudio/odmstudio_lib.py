@@ -302,12 +302,18 @@ class TrackableFeature(q.QObject):
         Searches all the intensityProfiles in the dataSource for the feature
         """
 
+        updateInterval = 10
+
         for i in range(self.dataSource.currentIndexLocation, self.dataSource.sourceLength):
-            self.dataSource.setCurrentIndexLocation(i)
-            position = self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
+            position = self.tracker.findNextPosition(self.dataSource.intensityProfiles.iloc[i])
             self._trackedPositions[i] = position
             self.dataSource.refreshResults()
-            time.sleep(0.005)
+            if i%10 == 0:
+                self.dataSource.setCurrentIndexLocation(i)
+                time.sleep(0.01)
+
+        self.dataSource.refreshResults()
+            
 
     
     def locateAllAsync(self):
