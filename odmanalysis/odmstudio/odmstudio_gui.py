@@ -297,7 +297,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.upperLimitSpinBox.valueChanged.connect(self.updateRegionLimits)
 
         self.initializeTrackerAction.triggered.connect(self.trackableFeature.initializeTracker)
-        self.locateAllAction.triggered.connect(self.trackableFeature.locateAll)
+        self.locateAllAction.triggered.connect(self.trackableFeature.locateAllAsync)
         self.locateInCurrentAction.triggered.connect(self.trackableFeature.locateInCurrent)
 
         self.trackableFeature.dataSource.sourceDataChanged.connect(self.updateSpinBoxLimits)
@@ -434,10 +434,11 @@ class IntensityProfilePlotWidget(qt.QWidget):
         
 
         # connect signals
-        self.stepSlider.valueChanged.connect(self.showStep)
         self.stepSlider.valueChanged.connect(self.stepSpinBox.setValue)
-        self.stepSpinBox.valueChanged.connect(self.showStep)
-        self.stepSpinBox.valueChanged.connect(self.stepSlider.setValue)
+        self.stepSpinBox.valueChanged.connect(self.dataSource.setCurrentIndexLocation)
+        self.dataSource.currentIndexLocationChanged.connect(self.stepSlider.setValue)
+
+        self.dataSource.currentIndexLocationChanged.connect(self.showStep)
         
         self.dataSource.sourceDataChanged.connect(self._updateControlLimits)
         
@@ -501,7 +502,35 @@ class DisplacementPlotWidget(qt.QWidget):
 
         self.plotWidget = pg.PlotWidget()
         layout.addWidget(self.plotWidget)
+        
+        self.__initializePlots()
+
         self.setLayout(layout)
+
+
+        #connect signals
+        self.dataSource.resultDataChanged.connect(self.updatePlot)
+
+    def __initializePlots(self):
+        pw = self.plotWidget
+        
+        self.dataPlot = pw.plot()
+        self.dataPlot.setPen((200,200,100))
+        
+        self.xValues = np.arange(self.dataSource.resultsLength)
+        
+        pw.setLabel('left', 'Displacement', units='px')
+        pw.setLabel('bottom', 'Index', units='#')
+        pw.setXRange(0, 200)
+        pw.setYRange(0, 10)
+        
+        pw.setAutoVisible(y=True)
+
+    def updatePlot(self):
+        if "displacement_mp" in self.dataSource.resultsDataFrame.columns:
+            self.xValues = np.arange(self.dataSource.resultsLength)
+            yValues = self.dataSource.getOrCreateResultColumn("displacement_mp")
+            self.dataPlot.setData(x=self.xValues, y=yValues)
         
 
 class ODMStudioMainWindow(qt.QMainWindow):

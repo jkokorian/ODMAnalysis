@@ -5,7 +5,7 @@ import numpy as np
 import odmanalysis as odm
 from odmanalysis.odmstudio.odmstudio_framework import RegisterSourceReader
 import cv2
-   
+import time
     
 class DataSource(q.QObject):
     
@@ -20,6 +20,7 @@ class DataSource(q.QObject):
     sourceDataChanged = q.pyqtSignal(pd.DataFrame)
     resultDataChanged = q.pyqtSignal(pd.DataFrame)
     sourcePathChanged = q.pyqtSignal(str)
+    currentIndexLocationChanged = q.pyqtSignal(int)
 
     @property
     def sourcePath(self):
@@ -75,7 +76,9 @@ class DataSource(q.QObject):
 
 
     def setCurrentIndexLocation(self,iloc):
-        self.__currentIloc = iloc
+        if self.__currentIloc != iloc:
+            self.__currentIloc = iloc
+            self.currentIndexLocationChanged.emit(iloc)
 
     def setSourceDataFrame(self,dataframe):
         self.__sourceDataFrame = dataframe
@@ -108,6 +111,9 @@ class DataSource(q.QObject):
         return self.__resultArrays[name]
 
     def refreshResults(self):
+        """
+        Emits the resultsDataChanged signal.
+        """
         self.resultDataChanged.emit(self.resultsDataFrame)
 
             
@@ -263,8 +269,8 @@ class TrackableFeature(q.QObject):
         self._tracker = FeatureTracker()
         assert isinstance(dataSource,DataSource)
         self._dataSource = dataSource
-        
-    
+        self._trackedPositions = np.array([])
+
     def setTracker(self,tracker):
         self._tracker = tracker
     
@@ -289,14 +295,33 @@ class TrackableFeature(q.QObject):
         """
         position = self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
         self._trackedPositions[self.dataSource.currentIndexLocation] = position
-        self._dataSource
+        self.dataSource.refreshResults()
 
     def locateAll(self):
         """
         Searches all the intensityProfiles in the dataSource for the feature
         """
-        pass
+
+        for i in range(self.dataSource.currentIndexLocation, self.dataSource.sourceLength):
+            self.dataSource.setCurrentIndexLocation(i)
+            position = self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
+            self._trackedPositions[i] = position
+            self.dataSource.refreshResults()
+            time.sleep(0.005)
+
     
+    def locateAllAsync(self):
+
+        that = self
+
+        class AnalyzerThread(q.QThread):
+            def run(self):
+                that.locateAll()
+
+        self.analyzerThread = AnalyzerThread()
+        self.analyzerThread.start()
+        return self.analyzerThread
+
      
     def setLowerLimit(self,value):
         self.lowerLimit = value

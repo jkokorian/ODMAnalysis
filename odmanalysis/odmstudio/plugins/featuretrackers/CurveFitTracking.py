@@ -19,7 +19,7 @@ class SimpleSplineTracker(lib.FeatureTracker):
         self.xValues = np.array([])
 
     def initialize(self,intensityProfile):
-        valuesDict = self.fitFunction.estimateInitialParameters(intensityProfile)
+        valuesDict = self.fitFunction.estimateInitialParameters(intensityProfile,filter_sigma=1)
         self.p0 = valuesDict.values()
         self.xValues = np.arange(len(intensityProfile))
                     
