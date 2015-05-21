@@ -14,8 +14,8 @@ class DataSource(q.QObject):
         return pd.DataFrame(data={"intensityProfile": []})
 
     @classmethod
-    def createDefaultResultsList(cls):
-        return []
+    def createDefaultResultsDataFrame(cls):
+        return pd.DataFrame()
 
     sourceDataChanged = q.pyqtSignal(pd.DataFrame)
     resultDataChanged = q.pyqtSignal(pd.DataFrame)
@@ -31,7 +31,7 @@ class DataSource(q.QObject):
     
     @property
     def resultsDataFrame(self):
-        return pd.DataFrame(data=self.__resultsList)
+        return pd.DataFrame(data=self.__resultsDataFrame)
 
     @property
     def intensityProfiles(self):
@@ -68,7 +68,8 @@ class DataSource(q.QObject):
     def __init__(self):
         q.QObject.__init__(self)
         self.__sourceDataFrame = DataSource.createDefaultSourceDataFrame()
-        self.__resultsList = DataSource.createDefaultResultsList()
+        self.__resultsDataFrame = DataSource.createDefaultResultsDataFrame()
+        self.__resultArrays = {}
         self.__currentIloc = 0
         self.__sourcePath = ""
 
@@ -78,7 +79,9 @@ class DataSource(q.QObject):
 
     def setSourceDataFrame(self,dataframe):
         self.__sourceDataFrame = dataframe
+        self.__resultsDataFrame = pd.DataFrame(index=dataframe.index)
         self.sourceDataChanged.emit(dataframe)
+        self.resultDataChanged.emit(self.__resultsDataFrame)
 
     def setSourcePath(self,path):
         self.__sourcePath = path
@@ -88,8 +91,31 @@ class DataSource(q.QObject):
         self.setSourceDataFrame(DataSource.createDefaultSourceDataFrame())
         self.setSourcePath("")
 
-    def storeResultValueAtIloc(self,iloc,key,value):
+    def createResultColumn(self,name,dtype='float'):
+        if not self.__resultArrays.has_key(name):
+            a = np.empty_like(self.resultsDataFrame.index,dtype=dtype)
+            a.fill(None)
+            self.__resultArrays[name] = a
+            self.resultsDataFrame[name] = pd.Series(data=a,index=self.resultsDataFrame.index)
+        
+        else:
+            raise NameError("a result column with this name already exists")
+    
+    def getOrCreateResultColumn(self,name,dtype='float'):
+        if not self.__resultArrays.has_key(name):
+            self.createResultColumn(name,dtype=dtype)
+            
+        return self.__resultArrays[name]
+
+    def refreshResults(self):
         pass
+
+            
+
+        
+        
+        
+            
 
 class SourceReader(q.QObject):
     
@@ -227,10 +253,11 @@ class TrackableFeature(q.QObject):
     def dataSource(self):
         return self._dataSource
 
-    def __init__(self,name,dataSource):
+    def __init__(self,name,shortName,dataSource):
         super(TrackableFeature,self).__init__()
         
         self.name = name
+        self.shortName = shortName
         self.lowerLimit = 0        
         self.upperLimit = 0        
         self._tracker = FeatureTracker()
@@ -252,13 +279,17 @@ class TrackableFeature(q.QObject):
         """
 
         self.tracker.initialize(self.dataSource.currentIntensityProfile)
+        self._trackedPositions = self.dataSource.getOrCreateResultColumn("displacement_%s" % self.shortName)
+
     
 
     def locateInCurrent(self):
         """
         Searches the currently selected intensity profile of the datasource within the limits for the feature using the tracker
         """
-        self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
+        position = self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
+        self._trackedPositions[self.dataSource.currentIndexLocation] = position
+        self._dataSource
 
     def locateAll(self):
         """

@@ -516,8 +516,8 @@ class ODMStudioMainWindow(qt.QMainWindow):
         self.fileOpener = FileOpener(self.dataSource, parent=self)
         self.intensityProfilePlot = IntensityProfilePlotWidget(self.dataSource, parent=self)
 
-        movingFeature = lib.TrackableFeature("moving feature", self.dataSource)
-        referenceFeature = lib.TrackableFeature("reference feature", self.dataSource)        
+        movingFeature = lib.TrackableFeature("moving feature", "mp", self.dataSource)
+        referenceFeature = lib.TrackableFeature("reference feature", "ref", self.dataSource)        
         
         self.movingFeatureWidget = TrackableFeatureWidget(movingFeature, parent=self)
         self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature, parent=self)
