@@ -7,6 +7,7 @@ class Observable(q.QObject):
         q.QObject.__init__(self)
 
         self.bindings = {}
+        self.signalOriginId = None
 
     def bind(self,instance,getter,setter,valueChangedSignal):
         binding = {"instance": instance,
@@ -20,11 +21,20 @@ class Observable(q.QObject):
         valueChangedSignal.connect(self.updateSubscribers)
 
     def updateSubscribers(self,value):
-        if not isinstance(self.sender(),qt.QWidget) or (isinstance(self.sender(),qt.QWidget) and self.sender().hasFocus()):
+        bindingCycleCompleted = False
+        if self.signalOriginId is not None:
+            sender = self.sender()
             for instanceId, binding in self.bindings.iteritems():
-                if instanceId != id(self.sender()) and (not isinstance(binding['instance'],qt.QWidget) or (isinstance(binding['instance'],qt.QWidget) and not binding['instance'].hasFocus())):
-                    binding['setter'](value)
-                    print "value updated on %s" % instanceId
+                if instanceId != self.signalOriginId:
+                    if instanceId != id(sender):
+                        binding['setter'](value)
+                        print "value updated on %s" % instanceId
+                else:
+                    break
+        else:
+            self.signalOriginId = id(self.sender())
+        if bindingCycleCompleted:
+            self.signalOriginId = None
 
 
 class Model(q.QObject):
