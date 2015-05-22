@@ -20,10 +20,11 @@ class Observable(q.QObject):
         valueChangedSignal.connect(self.updateSubscribers)
 
     def updateSubscribers(self,value):
-        for instanceId, binding in self.bindings.iteritems():
-            if instanceId != id(self.sender()):
-                binding['setter'](value)
-                print "value updated on %s" % instanceId
+        if not isinstance(self.sender(),qt.QWidget) or (isinstance(self.sender(),qt.QWidget) and self.sender().hasFocus()):
+            for instanceId, binding in self.bindings.iteritems():
+                if instanceId != id(self.sender()) and (not isinstance(binding['instance'],qt.QWidget) or (isinstance(binding['instance'],qt.QWidget) and not binding['instance'].hasFocus())):
+                    binding['setter'](value)
+                    print "value updated on %s" % instanceId
 
 
 class Model(q.QObject):
@@ -51,17 +52,21 @@ class TestWidget(qt.QWidget):
 
         spinbox1 = qt.QSpinBox()
         spinbox2 = qt.QSpinBox()
+        button = qt.QPushButton()
 
-        model = Model()
+        self.model = Model()
 
         valueObserver = Observable()
         self.valueObserver = valueObserver
         valueObserver.bind(spinbox1,spinbox1.value,spinbox1.setValue,spinbox1.valueChanged)
         valueObserver.bind(spinbox2,spinbox2.value,spinbox2.setValue,spinbox2.valueChanged)
-        valueObserver.bind(model,model.getValue,model.setValue,model.valueChanged)
+        valueObserver.bind(self.model,self.model.getValue,self.model.setValue,self.model.valueChanged)
+
+        button.clicked.connect(lambda: self.model.setValue(10))
 
         layout.addWidget(spinbox1)
         layout.addWidget(spinbox2)
+        layout.addWidget(button)
 
         self.setLayout(layout)
 
