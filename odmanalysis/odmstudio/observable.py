@@ -2,40 +2,48 @@
 import PyQt4.QtCore as q
 import PyQt4.QtGui as qt
 
+class Binding(object):
+    def __init__(self,instance,getter,setter,valueChangedSignal):
+        self.instanceId = id(instance)
+        self.instance = instance
+        self.getter = getter
+        self.setter = setter
+        self.valueChangedSignal = valueChangedSignal
+
+        
+
 class Observable(q.QObject):
     def __init__(self):
         q.QObject.__init__(self)
 
         self.bindings = {}
-        self.signalOriginId = None
+        self.ignoreEvents = False
 
     def bind(self,instance,getter,setter,valueChangedSignal):
-        binding = {"instance": instance,
-                   "getter": getter,
-                   "setter": setter,
-                   "valueChangedSignal": valueChangedSignal}
-        self.bindings[id(instance)] = binding
-        self.initializeBinding(**binding)
-
-    def initializeBinding(self,instance,getter,setter,valueChangedSignal):
+        binding = Binding(instance,getter,setter,valueChangedSignal)
+        self.bindings[binding.instanceId] = binding
         valueChangedSignal.connect(self.updateSubscribers)
 
-    def updateSubscribers(self,value):
-        bindingCycleCompleted = False
-        if self.signalOriginId is not None:
-            sender = self.sender()
-            for instanceId, binding in self.bindings.iteritems():
-                if instanceId != self.signalOriginId:
-                    if instanceId != id(sender):
-                        binding['setter'](value)
-                        print "value updated on %s" % instanceId
-                else:
-                    break
-        else:
-            self.signalOriginId = id(self.sender())
-        if bindingCycleCompleted:
-            self.signalOriginId = None
 
+    def updateSubscribers(self,value):
+        sender = self.sender()
+        if not self.ignoreEvents:
+            self.ignoreEvents = True
+
+            for binding in self.bindings.values():
+                if binding.instanceId == id(sender):
+                    continue
+
+                binding.setter(value)
+                print "value set on %s" % binding.instanceId
+
+            self.ignoreEvents = False
+
+                
+
+        
+        
+                        
 
 class Model(q.QObject):
     
