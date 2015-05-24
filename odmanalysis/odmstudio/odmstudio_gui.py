@@ -71,7 +71,7 @@ class FileOpener(qt.QWidget):
         self.__dataSource = dataSource
 
         #actions
-        self.openFileAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_DialogOpenButton),"Open file...",self)
+        self.openFileAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_DialogOpenButton),"Open data-source...",self,shortcut=qt.QKeySequence.Open)
         
 
         #connect signals and slots
