@@ -22,6 +22,7 @@ class DataSource(q.QObject):
     sourcePathChanged = q.pyqtSignal(str)
     currentIndexLocationChanged = q.pyqtSignal(int)
 
+
     @property
     def sourcePath(self):
         return self.__sourcePath
@@ -251,6 +252,9 @@ class FeatureTracker(q.QObject):
 
 class TrackableFeature(q.QObject):
     
+    regionChanged = q.pyqtSignal(tuple)
+
+
     @property
     def tracker(self):
         return self._tracker
@@ -258,14 +262,22 @@ class TrackableFeature(q.QObject):
     @property
     def dataSource(self):
         return self._dataSource
+    
+    @property
+    def lowerLimit(self):
+        return self.region[0]
+
+    @property
+    def upperLimit(self):
+        return self.region[1]
+
 
     def __init__(self,name,shortName,dataSource):
         super(TrackableFeature,self).__init__()
         
         self.name = name
         self.shortName = shortName
-        self.lowerLimit = 0        
-        self.upperLimit = 0        
+        self.region = [0,0]   
         self._tracker = FeatureTracker()
         assert isinstance(dataSource,DataSource)
         self._dataSource = dataSource
@@ -328,13 +340,32 @@ class TrackableFeature(q.QObject):
         self.analyzerThread.start()
         return self.analyzerThread
 
+
+    def getRegion(self):
+        return self.region[:]
      
+    def setRegion(self,region):
+        self.region[0] = region[0]
+        self.region[1] = region[1]
+        self.regionChanged.emit(region)
+
+    def getLowerLimit(self):
+        return self.region[0]
+
     def setLowerLimit(self,value):
-        self.lowerLimit = value
+        if value != self.region[0]:
+            self.region[0] = value
+            self.regionChanged.emit(tuple(self.region))
+
+    def getUpperLimit(self):
+        return self.region[1]
 
     def setUpperLimit(self,value):
-        self.upperLimit = value
+        if value != self.region[1]:
+            self.region[1] = value
+            self.regionChanged.emit(tuple(self.region))
         
+    
 
 
         

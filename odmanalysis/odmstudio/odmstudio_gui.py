@@ -7,7 +7,7 @@ import odmanalysis.odmstudio.odmstudio_framework as fw
 import pandas as pd
 import numpy as np
 import os
-
+from odmanalysis.odmstudio.observable import Observer
 
 
 class PlotController(q.QObject):
@@ -212,10 +212,82 @@ class FeatureTrackerControlsWidget(qt.QWidget):
 
 
 
+class RegionSpinBoxControl(qt.QWidget):
+
+    regionChanged = q.pyqtSignal(tuple)
+    lowerLimitChanged  =q.pyqtSignal(int)
+    upperLimitChanged = q.pyqtSignal(int)
+    
+    @property
+    def region(self):
+        return self.getRegion()
+
+    def __init__(self,parent=None):
+        qt.QWidget.__init__(self,parent)
+
+        
+
+        self.initializeUI()
+
+
+    def initializeUI(self):
+        layout = qt.QHBoxLayout()
+        self.lowerLimitSpinBox = qt.QSpinBox()
+        self.upperLimitSpinBox = qt.QSpinBox()
+        layout.addWidget(self.lowerLimitSpinBox)
+        layout.addWidget(self.upperLimitSpinBox)
+        self.setLayout(layout)
+
+        #connect signals
+        self.lowerLimitSpinBox.valueChanged.connect(self._emitRegionChanged)
+        self.upperLimitSpinBox.valueChanged.connect(self._emitRegionChanged)
+
+
+    def getRegion(self):
+        return (self.lowerLimitSpinBox.value(),self.upperLimitSpinBox.value())
+
+    def setRegion(self,region):
+        regionChanged = False
+        
+        if region[0] != self.region[0]:
+            regionChanged = True
+            self.lowerLimitSpinBox.setValue(region[0])
+        if region[1] != self.region[1]:
+            regionChanged = True
+            self.upperLimitSpinBox.setValue(region[1])
+        
+        if regionChanged:
+            self.regionChanged.emit(self.region)
+
+    def getUpperLimit(self):
+        return self.region[1]
+
+    def getLowerLimit(self):
+        return self.region[0]
+
+    def setLowerLimit(self,value):
+        if value != self.region[0]:
+            self.lowerLimitSpinBox.setValue(value)
+            self.lowerLimitChanged(self.getLowerLimit())
+            self.regionChanged.emit(self.region)
+
+    def setUpperLimit(self,value):
+        if value != self.region[1]:
+            self.upperLimitSpinBox.setValue(value)
+            self.upperLimitChanged.emit(self.getUpperLimit())
+            self.regionChanged.emit(self.region)
+
+    def _emitRegionChanged(self):
+        self.regionChanged.emit(self.region)
+
+
+
 class TrackableFeatureWidget(qt.QWidget,PlotController):
     """
     Form for defining a trackable feature
     """
+
+    _linearRegionItem_regionChanged = q.pyqtSignal(tuple)
 
 
     def __init__(self,trackableFeature,parent=None):
@@ -241,13 +313,11 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.featureEnabledCheckBox.setChecked(True)
         layout.addWidget(self.featureEnabledCheckBox)
 
-        #upper and lower limit SpinBoxes
-        hLayout = qt.QHBoxLayout()
-        self.lowerLimitSpinBox = qt.QSpinBox()
-        self.upperLimitSpinBox = qt.QSpinBox()
-        hLayout.addWidget(self.lowerLimitSpinBox)
-        hLayout.addWidget(self.upperLimitSpinBox)
-        layout.addLayout(hLayout)
+        
+        #region limit SpinBoxes
+        self.regionSpinBoxControl = RegionSpinBoxControl(self)
+        layout.addWidget(self.regionSpinBoxControl)
+
 
         #featureTrackerComboBox
         self.featureTrackerComboBox = qt.QComboBox()
@@ -285,22 +355,23 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.setFeatureTracker()
 
 
-        
-
 
         #connect signals and slots
         self.featureEnabledCheckBox.stateChanged.connect(self.setFeatureTrackerEnabled)
         self.featureTrackerComboBox.currentIndexChanged.connect(self.setFeatureTracker)
-        self.lowerLimitSpinBox.valueChanged.connect(self.trackableFeature.setLowerLimit)
-        self.upperLimitSpinBox.valueChanged.connect(self.trackableFeature.setUpperLimit)
-        self.lowerLimitSpinBox.valueChanged.connect(self.updateRegionLimits)
-        self.upperLimitSpinBox.valueChanged.connect(self.updateRegionLimits)
 
         self.initializeTrackerAction.triggered.connect(self.trackableFeature.initializeTracker)
         self.locateAllAction.triggered.connect(self.trackableFeature.locateAllAsync)
         self.locateInCurrentAction.triggered.connect(self.trackableFeature.locateInCurrent)
 
         self.trackableFeature.dataSource.sourceDataChanged.connect(self.updateSpinBoxLimits)
+
+
+        #bind linear region item with model and spinboxes
+
+        self.regionObserver = Observer()
+        self.regionObserver.bind(self.regionSpinBoxControl,self.regionSpinBoxControl.getRegion,self.regionSpinBoxControl.setRegion,self.regionSpinBoxControl.regionChanged)
+        self.regionObserver.bind(self.trackableFeature,self.trackableFeature.getRegion,self.trackableFeature.setRegion,self.trackableFeature.regionChanged)
 
     @property
     def trackableFeature(self):
@@ -330,33 +401,27 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
 
     
     def createPlotRegion(self):
-        self.region = pg.LinearRegionItem(brush=pg.intColor(1,alpha=100))
-        self.region.setZValue(10)
+        self.linearRegionItem = pg.LinearRegionItem(brush=pg.intColor(1,alpha=100))
+        self.linearRegionItem.setZValue(10)
         self.regionLabel = pg.TextItem(self.trackableFeature.name, color=pg.intColor(1), anchor=(0,1))
-        self.regionLabel.setX(self.region.getRegion()[0])
-        self.plotWidget.addItem(self.regionLabel)                
-        self.plotWidget.addItem(self.region, ignoreBounds=True)
-        self.region.sigRegionChanged.connect(self.region_RegionChanged)
-        self.region.sigRegionChangeFinished.connect(self.region_RegionChangeFinished)
+        self.regionLabel.setX(self.linearRegionItem.getRegion()[0])
+        self.plotWidget.addItem(self.regionLabel)
+        self.plotWidget.addItem(self.linearRegionItem, ignoreBounds=True)
+        self.linearRegionItem.sigRegionChanged.connect(self.linearRegionItem_RegionChanged)
+        self.regionObserver.bind(self.linearRegionItem,self.linearRegionItem.getRegion,self.linearRegionItem.setRegion,self._linearRegionItem_regionChanged)
 
     def disconnectPlotWidget(self):
-        self.region.sigRegionChanged.disconnect(self.region_RegionChanged)
+        self.linearRegionItem.sigRegionChanged.disconnect(self.linearRegionItem_RegionChanged)
         return super(TrackableFeatureWidget, self).disconnectPlotWidget()
         
-    def region_RegionChangeFinished(self,r):
-        pass
+    
 
-    def region_RegionChanged(self, r):
-        self.regionLabel.setX(r.getRegion()[0])
-        if (self.lowerLimitSpinBox.value() != r.getRegion()[0]):
-            self.lowerLimitSpinBox.setValue(r.getRegion()[0])
-        if (self.upperLimitSpinBox.value() != r.getRegion()[1]):
-            self.upperLimitSpinBox.setValue(r.getRegion()[1])
-
-    def updateRegionLimits(self):
-        if (self.lowerLimitSpinBox.hasFocus() or self.upperLimitSpinBox.hasFocus()):
-            self.region.setRegion((self.lowerLimitSpinBox.value(),self.upperLimitSpinBox.value()))
-
+    def linearRegionItem_RegionChanged(self, r):
+        region = r.getRegion()
+        self.regionLabel.setX(region[0])
+        self._linearRegionItem_regionChanged.emit(region)
+    
+    
     
 
         

@@ -12,7 +12,7 @@ class Binding(object):
 
         
 
-class Observable(q.QObject):
+class Observer(q.QObject):
     def __init__(self):
         q.QObject.__init__(self)
 
@@ -25,7 +25,7 @@ class Observable(q.QObject):
         valueChangedSignal.connect(self.updateSubscribers)
 
 
-    def updateSubscribers(self,value):
+    def updateSubscribers(self,*args,**kwargs):
         sender = self.sender()
         if not self.ignoreEvents:
             self.ignoreEvents = True
@@ -34,14 +34,9 @@ class Observable(q.QObject):
                 if binding.instanceId == id(sender):
                     continue
 
-                binding.setter(value)
-                print "value set on %s" % binding.instanceId
+                binding.setter(*args,**kwargs)
 
             self.ignoreEvents = False
-
-                
-
-        
         
                         
 
@@ -74,7 +69,7 @@ class TestWidget(qt.QWidget):
 
         self.model = Model()
 
-        valueObserver = Observable()
+        valueObserver = Observer()
         self.valueObserver = valueObserver
         valueObserver.bind(spinbox1,spinbox1.value,spinbox1.setValue,spinbox1.valueChanged)
         valueObserver.bind(spinbox2,spinbox2.value,spinbox2.setValue,spinbox2.valueChanged)
