@@ -24,6 +24,22 @@ class Observer(q.QObject):
         self.bindings[binding.instanceId] = binding
         valueChangedSignal.connect(self.updateSubscribers)
 
+    def bindProperty(self,instance,propertyName):
+        getterAttribute = getattr(instance,propertyName)
+        if callable(getterAttribute):
+            #the propertyName turns out to be a method (like value()), assume the corresponding setter is called setValue()
+            getter = getterAttribute
+            if len(propertyName) >  1:
+                setter = getattr(instance,"set" + propertyName[0].upper() + propertyName[1:])
+            else:
+                setter = getattr(instance,"set" + propertyName[0].upper())
+        else:
+            getter = lambda: getterAttribute()
+            setter = lambda value: setattr(instance,propertyName,value)
+
+        valueChangedSignal = getattr(instance,propertyName + "Changed")
+
+        self.bind(instance,getter,setter,valueChangedSignal)
 
     def updateSubscribers(self,*args,**kwargs):
         sender = self.sender()
@@ -46,15 +62,18 @@ class Model(q.QObject):
     
     def __init__(self):
         q.QObject.__init__(self)
-        self.value = 0
+        self.__value = 0
 
-    def setValue(self, value):
-        if (self.value != value):
-            self.value = value
+    @property
+    def value(self):
+        return self.__value
+    
+    @value.setter
+    def value(self, value):
+        if (self.__value != value):
+            self.__value = value
             self.valueChanged.emit(value)
 
-    def getValue(self):
-        return value
 
 
 
@@ -71,11 +90,11 @@ class TestWidget(qt.QWidget):
 
         valueObserver = Observer()
         self.valueObserver = valueObserver
-        valueObserver.bind(spinbox1,spinbox1.value,spinbox1.setValue,spinbox1.valueChanged)
-        valueObserver.bind(spinbox2,spinbox2.value,spinbox2.setValue,spinbox2.valueChanged)
-        valueObserver.bind(self.model,self.model.getValue,self.model.setValue,self.model.valueChanged)
+        valueObserver.bindProperty(spinbox1, "value")
+        valueObserver.bindProperty(spinbox2, "value")
+        valueObserver.bindProperty(self.model, "value")
 
-        button.clicked.connect(lambda: self.model.setValue(10))
+        button.clicked.connect(lambda: setattr(self.model,"value",10))
 
         layout.addWidget(spinbox1)
         layout.addWidget(spinbox2)

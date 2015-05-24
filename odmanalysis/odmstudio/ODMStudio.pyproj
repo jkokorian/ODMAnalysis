@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{ad5df059-dea1-4351-a893-e24bd1ba194a}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>odmstudio_app.py</StartupFile>
+    <StartupFile>observable.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
