@@ -280,7 +280,10 @@ class RegionSpinBoxControl(qt.QWidget):
     def _emitRegionChanged(self):
         self.regionChanged.emit(self.region)
 
-
+    def setSpinBoxMaxima(self,value):
+        spinBoxes = [self.lowerLimitSpinBox,self.upperLimitSpinBox]
+        for spinBox in spinBoxes:
+            spinBox.setMaximum(value)
 
 class TrackableFeatureWidget(qt.QWidget,PlotController):
     """
@@ -364,7 +367,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.locateAllAction.triggered.connect(self.trackableFeature.locateAllAsync)
         self.locateInCurrentAction.triggered.connect(self.trackableFeature.locateInCurrent)
 
-        self.trackableFeature.dataSource.sourceDataChanged.connect(self.updateSpinBoxLimits)
+        self.trackableFeature.dataSource.sourceDataChanged.connect(self.setRegionMaximum)
 
 
         #bind linear region item with model and spinboxes
@@ -440,18 +443,13 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
     def setFeatureTrackerEnabled(self,enabled):
         self._featureTrackerIsEnabled = (enabled == True)
 
+    def setRegionMaximum(self):
+        if not self.trackableFeature.dataSource.sourceIsEmpty:
+            xMaximum = len(self.trackableFeature.dataSource.intensityProfiles.iloc[0])
+            self.regionSpinBoxControl.setSpinBoxMaxima(xMaximum)
 
     
-    def updateSpinBoxLimits(self):
-        spinBoxes = [self.lowerLimitSpinBox,self.upperLimitSpinBox]
-        if (self.trackableFeature.dataSource.sourceIsEmpty):
-            for spinBox in spinBoxes:
-                spinBox.setDisabled(True)
-        else:
-            for spinBox in spinBoxes:
-                spinBox.setEnabled(True)
-                xMaximum = len(self.trackableFeature.dataSource.intensityProfiles.iloc[0])
-                spinBox.setMaximum(xMaximum)
+    
                 
 
 
