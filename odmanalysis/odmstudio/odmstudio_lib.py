@@ -118,9 +118,6 @@ class DataSource(q.QObject):
         self.resultDataChanged.emit(self.resultsDataFrame)
 
             
-
-        
-        
         
             
 
@@ -129,6 +126,7 @@ class SourceReader(q.QObject):
     
     statusMessageChanged = q.pyqtSignal(str)
     progressChanged = q.pyqtSignal(int)
+    sourcePathChanged = q.pyqtSignal(str)
     
     @property
     def dataSource(self):
@@ -139,14 +137,18 @@ class SourceReader(q.QObject):
         return self._statusMessage
         
     @property
-    def currentPath(self):
-        return self._currentPath
-
-    @property
     def progress(self):
         return self._progress
 
-    
+    @property
+    def sourcePath(self):
+        return self.__dataSource.sourcePath
+
+    @sourcePath.setter
+    def sourcePath(self,path):
+        self.__dataSource.clear()
+        self.__dataSource.setSourcePath(path)
+
     def __init__(self,dataSource):
         """
         Parameters
@@ -162,6 +164,9 @@ class SourceReader(q.QObject):
 
         assert isinstance(dataSource,DataSource)
         self.__dataSource = dataSource
+
+        #connect signals
+        self.dataSource.sourcePathChanged.connect(self.sourcePathChanged)
         
     def _setStatusMessage(self,message):
         self._statusMessage = message
@@ -175,23 +180,15 @@ class SourceReader(q.QObject):
     def _emitDataChanged(self):
         self.dataChanged.emit(self.data)
 
-    def read(self,path):
+    def read(self):
         """
         Read data from path synchronously.
 
-        Override this method to implement the logic for reading from the path. Make sure to call this super method before doing anything else.
+        Override this method to implement the logic for reading from the path.
         """
-        
-        self.__dataSource.clear()
-        
-        
+        pass        
 
-    def _setCurrentPath(self,path):
-        self._currentPath = path
-        self.sourceChanged.emit(str(path))   
-
-
-    def readAsync(self,path):
+    def readAsync(self):
         """
         Read data from path asynchronously.
 
@@ -205,7 +202,7 @@ class SourceReader(q.QObject):
         that = self
         class DataLoaderThread(q.QThread):
             def run(self):
-                that.read(path)
+                that.read()
 
 
 

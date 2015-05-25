@@ -79,7 +79,8 @@ class FileOpener(qt.QWidget):
 
     
     def showOpenFileDialog(self):
-        extensionsFilter = ";;".join([srr.getFilterString() for srr in fw.SourceReaderFactory.getSourceReaderRegistrations()])
+        allSupportedFilesFilter = "all supported files (%s)" % (" ".join(["*.%s" % ext for ssr in fw.SourceReaderFactory.getSourceReaderRegistrations() for ext in ssr.extensions]))
+        extensionsFilter = ";;".join([allSupportedFilesFilter] + [srr.getFilterString() for srr in fw.SourceReaderFactory.getSourceReaderRegistrations()])
         fileName = qt.QFileDialog.getOpenFileName(parent=None,caption="open file...",directory="",filter=extensionsFilter)
         if fileName:
             self.tryOpenFiles([fileName])
@@ -106,14 +107,15 @@ class FileOpener(qt.QWidget):
 
         #set source reader
         self.sourceReader = srRegistration.sourceReaderType(self.__dataSource)
-
+        self.sourceReader.sourcePath = paths[0] #HACK: does not handle multiple files
 
         SRWidget = fw.WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
         
 
         if SRWidget is not None:
             self.sourceReaderWidget = SRWidget(self.sourceReader,parent=self)
-            #TODO: show the SourceReader Widget in a dialog
+            if isinstance(self.sourceReaderWidget, qt.QDialog):
+                self.sourceReaderWidget.show()
 
         else:
             self.sourceReaderWidget = None
@@ -121,9 +123,9 @@ class FileOpener(qt.QWidget):
             # if there is no widget defined for the target SourceReader, read
             # the files to open immediately
             if len(paths) == 1:
-                self.__readerThread = self.sourceReader.readAsync(paths[0])
+                self.__readerThread = self.sourceReader.readAsync()
             else:
-                self.__readerThread = self.sourceReader.readAsync(paths)
+                self.__readerThread = self.sourceReader.readAsync()
             
                 
     @property

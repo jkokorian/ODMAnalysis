@@ -11,13 +11,13 @@ class CsvReader(lib.SourceReader):
         lib.SourceReader.__init__(self, dataSource)
         
 
-    def read(self,path):
-        super(CsvReader, self).read(path)
+    def read(self):
+        super(CsvReader,self).read()
         
         self._setStatusMessage("reading...")
-        reader = odm.getODMDataReader(path,chunksize=500)
+        reader = odm.getODMDataReader(self.sourcePath,chunksize=500)
         
-        lineCount = float(sum(1 for line in open(path)))
+        lineCount = float(sum(1 for line in open(self.sourcePath)))
         chunks = []
         linesRead = 1
         for chunk in reader:
