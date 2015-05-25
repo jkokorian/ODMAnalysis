@@ -7,7 +7,7 @@ import odmanalysis.odmstudio.odmstudio_framework as fw
 import pandas as pd
 import numpy as np
 import os
-from odmanalysis.odmstudio.observable import Observer
+from pyqt2waybinding import Observer
 
 
 class PlotController(q.QObject):
@@ -373,8 +373,8 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         #bind linear region item with model and spinboxes
 
         self.regionObserver = Observer()
-        self.regionObserver.bind(self.regionSpinBoxControl,self.regionSpinBoxControl.getRegion,self.regionSpinBoxControl.setRegion,self.regionSpinBoxControl.regionChanged)
-        self.regionObserver.bind(self.trackableFeature,self.trackableFeature.getRegion,self.trackableFeature.setRegion,self.trackableFeature.regionChanged)
+        self.regionObserver.bindToProperty(self.regionSpinBoxControl,"setRegion",useGetter = True)
+        self.regionObserver.bindToProperty(self.trackableFeature,"setRegion", useGetter = True)
 
     @property
     def trackableFeature(self):
@@ -411,7 +411,7 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
         self.plotWidget.addItem(self.regionLabel)
         self.plotWidget.addItem(self.linearRegionItem, ignoreBounds=True)
         self.linearRegionItem.sigRegionChanged.connect(self.linearRegionItem_RegionChanged)
-        self.regionObserver.bind(self.linearRegionItem,self.linearRegionItem.getRegion,self.linearRegionItem.setRegion,self._linearRegionItem_regionChanged)
+        self.regionObserver.bind(self.linearRegionItem,self.linearRegionItem.setRegion,self._linearRegionItem_regionChanged)
 
     def disconnectPlotWidget(self):
         self.linearRegionItem.sigRegionChanged.disconnect(self.linearRegionItem_RegionChanged)
