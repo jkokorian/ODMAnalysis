@@ -119,7 +119,6 @@ class VideoReaderDialog(qt.QDialog):
         self.setLayout(layout)
         
         hLayout = qt.QHBoxLayout()
-        layout.addLayout(hLayout)
         
         self.frameSlider = qt.QSlider(q.Qt.Horizontal)
         self.frameSlider.setTickPosition(qt.QSlider.TicksBothSides)
@@ -130,9 +129,14 @@ class VideoReaderDialog(qt.QDialog):
         hLayout.addWidget(self.frameSpinBox)
         hLayout.addWidget(self.frameSlider)
 
+        layout.addLayout(hLayout)
+
+
         self.imagePlotWidget = pg.PlotWidget(self)
         self.imageItem = pg.ImageItem()
         self.imagePlotWidget.addItem(self.imageItem)
+        self.imagePlotWidget.setAspectLocked(True)
+        self.imagePlotWidget
         
         # Custom ROI for selecting an image region
         roi = pg.ROI([-8, 14], [6, 5])
@@ -155,9 +159,9 @@ class VideoReaderDialog(qt.QDialog):
 
         layout.addWidget(ipw)
 
-        self.roiVerticalSumPlotWidget = pg.PlotWidget(self)
-        self.roiVerticalSumPlotItem = pg.PlotItem()
-        self.roiVerticalSumPlotWidget.addItem(self.roiVerticalSumPlotItem)
+        self.roiVerticalSumPlotWidget = pg.PlotWidget()
+        self.roiVerticalSumPlot = self.roiVerticalSumPlotWidget.plot()
+        self.roiVerticalSumPlot.setPen((200,200,100))
 
 
         layout.addWidget(self.roiVerticalSumPlotWidget)
@@ -194,7 +198,7 @@ class VideoReaderDialog(qt.QDialog):
 
     def updateRoiPlots(self):
         selected = self.roi.getArrayRegion(self.__currentFrame,self.imageItem)
-        self.roiVerticalSumPlotItem.plot(selected.sum(axis=2).sum(axis=1),clear=True)
-        pass
+        self.roiVerticalSumPlot.setData(x=np.arange(selected.shape[0]),y=selected.sum(axis=2).sum(axis=1),clear=True)
+        
 
 
