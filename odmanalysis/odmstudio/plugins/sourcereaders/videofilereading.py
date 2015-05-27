@@ -43,37 +43,57 @@ class VideoReader(lib.SourceReader):
         value = (self.__videoCapture.get(3), self.__videoCapture.get(4))
         return value
 
+    @property
+    def roi(self):
+        return self.__roi
+
+    @property
+    def imageItem(self):
+        return self.__imageItem
+
+    @property
+    def currentFrame(self):
+        return self.__currentFrame
+
+    @property
+    def currentRegionOfInterest(self):
+        return self.__roi.getArrayRegion(self.__currentFrame,self.__imageItem)
+
     def __init__(self,dataSource):
         lib.SourceReader.__init__(self,dataSource)
         
         self._aoi = (0,0,100,100) #x_left,y_top,width,height
         self.summingAxis = 0
         self.__currentFrameIndex = -1
-        
+        self.__roi = pg.ROI((0,0))
+        self.__imageItem = pg.ImageItem()
+        self.__currentFrame = None
 
     def _initializeVideoCapture(self):
         self.__videoCapture = cv2.VideoCapture(self.sourcePath)
         
         self.currentFrameIndex = 0
+        self.__roi.setSize([s/5.0 for s in self.frameSize])
 
     def _closeVideoCapture(self):
         self.__videoCapture.release()
 
 
-    def readCurrentFrame(self):
+    def grabFrameAtIndex(self):
         if self.__videoCapture.isOpened():
             vid = self.__videoCapture
             vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,self.currentFrameIndex)
-            retval, im = vid.read()
-            return im
+            if self.__currentFrame is not None:
+                vid.read(self.__currentFrame)
+            else:
+                retval, self.__currentFrame = vid.read()
             
-        else:
-            return None
+            self.imageItem.setImage(self.__currentFrame)
 
     def read(self):
         
         path = self.sourcePath
-        super(VideoReader, self).read(path)
+        super(VideoReader, self).read()
 
         vid = cv2.VideoCapture(path)
 
@@ -88,9 +108,10 @@ class VideoReader(lib.SourceReader):
         timeSteps = np.arange(frameCount)/frameRate
 
         for i in range(frameCount):
-            result, frame = vid.read()
-            frameAOIGrayscale = frame[self.aoiSlices[0],self.aoiSlices[1],:].sum(axis=2)
-            line = frameAOIGrayscale.sum(axis=self.summingAxis)
+            self.currentFrameIndex = i
+            self.grabFrameAtIndex()
+
+            line = self.currentRegionOfInterest.sum(axis=2).sum(axis=1)
             
             intensityProfiles.append(line)
 
@@ -113,7 +134,6 @@ class VideoReaderDialog(qt.QDialog):
 
         assert isinstance(videoReader,VideoReader)
         self.videoReader = videoReader
-        self.__currentFrame = None
 
         layout = qt.QVBoxLayout()        
         self.setLayout(layout)
@@ -133,13 +153,13 @@ class VideoReaderDialog(qt.QDialog):
 
 
         self.imagePlotWidget = pg.PlotWidget(self)
-        self.imageItem = pg.ImageItem()
-        self.imagePlotWidget.addItem(self.imageItem)
+        imageItem = self.videoReader.imageItem
+        self.imagePlotWidget.addItem(imageItem)
         self.imagePlotWidget.setAspectLocked(True)
         self.imagePlotWidget
         
         # Custom ROI for selecting an image region
-        roi = pg.ROI([-8, 14], [6, 5])
+        roi = self.videoReader.roi
         roi.addScaleHandle([0.5, 1], [0.5, 0])
         roi.addRotateHandle([0, 0.5], [0.5, 0.5])
         roi.addScaleHandle([1, 0.5], [0, 0.5])
@@ -151,7 +171,6 @@ class VideoReaderDialog(qt.QDialog):
         roi.addRotateHandle([1,0.3], [0.5,0.5])
         self.imagePlotWidget.addItem(roi)
         roi.setZValue(10)  # make sure ROI is drawn above image
-        self.roi = roi
 
         ipw = self.imagePlotWidget
         
@@ -170,7 +189,7 @@ class VideoReaderDialog(qt.QDialog):
         buttons = qt.QDialogButtonBox(
             qt.QDialogButtonBox.Ok | qt.QDialogButtonBox.Cancel,
             q.Qt.Horizontal, self)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self.videoReader.read)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
@@ -184,21 +203,18 @@ class VideoReaderDialog(qt.QDialog):
         self.frameObserver.bindToProperty(self.videoReader,"currentFrameIndex")
         
         self.videoReader.currentFrameIndexChanged.connect(self._showCurrentFrame)
-        self.roi.sigRegionChanged.connect(self.updateRoiPlots)
+        self.videoReader.roi.sigRegionChanged.connect(self.updateRoiPlots)
 
         self.videoReader._initializeVideoCapture()
         self.frameSlider.setMaximum(self.videoReader.frameCount)
         self.frameSpinBox.setMaximum(self.videoReader.frameCount)
 
     def _showCurrentFrame(self):
-        frame = self.videoReader.readCurrentFrame()
-        self.__currentFrame = frame
-        self.imageItem.setImage(frame)
+        self.videoReader.grabFrameAtIndex()
         self.updateRoiPlots()
 
     def updateRoiPlots(self):
-        selected = self.roi.getArrayRegion(self.__currentFrame,self.imageItem)
+        selected = self.videoReader.currentRegionOfInterest
         self.roiVerticalSumPlot.setData(x=np.arange(selected.shape[0]),y=selected.sum(axis=2).sum(axis=1),clear=True)
         
-
 

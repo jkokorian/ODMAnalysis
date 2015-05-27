@@ -164,6 +164,17 @@ class SourceReader(q.QObject):
 
         assert isinstance(dataSource,DataSource)
         self.__dataSource = dataSource
+        
+
+        that = self
+        class DataLoaderThread(q.QThread):
+            def run(self):
+                that.read()
+
+
+
+        self.readerThread = DataLoaderThread()
+
 
         #connect signals
         self.dataSource.sourcePathChanged.connect(self.sourcePathChanged)
@@ -199,18 +210,11 @@ class SourceReader(q.QObject):
         """
         
         
-        that = self
-        class DataLoaderThread(q.QThread):
-            def run(self):
-                that.read()
-
-
-
-        thread = DataLoaderThread()
-        thread.start()
+        if not self.readerThread.isRunning():
+            self.readerThread.start()
         
         
-        return thread
+        return self.readerThread
 
        
 
