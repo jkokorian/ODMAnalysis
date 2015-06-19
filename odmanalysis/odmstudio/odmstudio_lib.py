@@ -396,31 +396,46 @@ class TrackableFeaturePair(q.QObject):
         self.movingFeature.initializeTracker();
 
         self._differentialResultColumn = self._dataSource.getOrCreateResultColumn("displacement_diff")
+
+    def locateAtIndexLocation(self, i, refreshDataSource = True):
+        movingPeakPosition = self.movingFeature.locateAtIndexLocation(i,refreshDataSource=False)
+        referencePeakPosition = self.referenceFeature.locateAtIndexLocation(i,refreshDataSource=False)
+        self._differentialResultColumn[self.dataSource.currentIndexLocation] = movingPeakPosition - referencePeakPosition
+        
+        if refreshDataSource == True:
+            self.dataSource.refreshResults()
+
     
     def locateInCurrent(self):
-        movingPeakPosition = self.movingFeature.locateInCurrent(refreshDataSource=False)
-        referencePeakPosition = self.referenceFeature.locateInCurrent(refreshDataSource=False)
-        self._differentialResultColumn[self.dataSource.currentIndexLocation] = movingPeakPosition - referencePeakPosition
-        self.dataSource.refreshResults()
-
-    def locateAll(self):
+        locateAtIndexLocation(self.dataSource.currentIndexLocation)
+        
+    def locateAll(self, refreshDataSource=True):
         """
-        Searches all the intensityProfiles in the dataSource for the featurepair
+        Searches all the intensityProfiles in the dataSource for the feature
         """
 
         updateInterval = 10
 
         for i in range(0, self.dataSource.sourceLength):
-            self.locateInCurrent()
+            self.locateAtIndexLocation(i, refreshDataSource = False)
             if i%10 == 0:
                 self.dataSource.setCurrentIndexLocation(i)
                 self.dataSource.refreshResults()
-
-        self.dataSource.refreshResults()
+        
+        if refreshDataSource == True:
+            self.dataSource.refreshResults()
         
 
     def locateAllAsync(self):
-        pass
+        that = self
+
+        class AnalyzerThread(q.QThread):
+            def run(self):
+                that.locateAll()
+
+        self.analyzerThread = AnalyzerThread()
+        self.analyzerThread.start()
+        return self.analyzerThread
         
 
 
