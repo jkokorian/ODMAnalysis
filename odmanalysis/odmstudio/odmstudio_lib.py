@@ -19,6 +19,7 @@ class DataSource(q.QObject):
 
     sourceDataChanged = q.pyqtSignal(pd.DataFrame)
     resultDataChanged = q.pyqtSignal(pd.DataFrame)
+    resultDataCleared = q.pyqtSignal()
     sourcePathChanged = q.pyqtSignal(str)
     currentIndexLocationChanged = q.pyqtSignal(int)
 
@@ -94,6 +95,11 @@ class DataSource(q.QObject):
     def clear(self):
         self.setSourceDataFrame(DataSource.createDefaultSourceDataFrame())
         self.setSourcePath("")
+
+    def clearResults(self):
+        self.__resultArrays = {}
+        self.__resultsDataFrame = DataSource.createDefaultResultsDataFrame()
+        self.resultDataCleared.emit()
 
     def createResultColumn(self,name,dtype='float'):
         if not self.__resultArrays.has_key(name):
@@ -284,6 +290,9 @@ class TrackableFeature(q.QObject):
         self._dataSource = dataSource
         self._trackedPositions = np.array([])
 
+        #connect signals and slots
+        self._dataSource.resultDataCleared.connect(self.clearTrackedPositions)
+
     def setTracker(self,tracker):
         self._tracker = tracker
     
@@ -299,34 +308,43 @@ class TrackableFeature(q.QObject):
 
         self.tracker.initialize(self.dataSource.currentIntensityProfile)
         self._trackedPositions = self.dataSource.getOrCreateResultColumn("displacement_%s" % self.shortName)
+        
+    def clearTrackedPositions(self):
+        self._trackedPositions = None
 
-    
+    def locateAtIndexLocation(self, i, refreshDataSource=True):
+        """
+        Searches the the i'th intensity profile of the datasource within the limits for the feature using the tracker
+        """
+        position = self.tracker.findNextPosition(self.dataSource.intensityProfiles.iloc[i])
+        self._trackedPositions[i] = position
+        if refreshDataSource == True:
+            self.dataSource.refreshResults()
 
-    def locateInCurrent(self):
+        return position
+
+    def locateInCurrent(self, refreshDataSource=True):
         """
         Searches the currently selected intensity profile of the datasource within the limits for the feature using the tracker
         """
-        position = self.tracker.findNextPosition(self.dataSource.currentIntensityProfile)
-        self._trackedPositions[self.dataSource.currentIndexLocation] = position
-        self.dataSource.refreshResults()
+        return self.locateAtIndexLocation(self.dataSource.currentIndexLocation)
 
-    def locateAll(self):
+    def locateAll(self, refreshDataSource=True):
         """
         Searches all the intensityProfiles in the dataSource for the feature
         """
 
         updateInterval = 10
 
-        for i in range(self.dataSource.currentIndexLocation, self.dataSource.sourceLength):
-            position = self.tracker.findNextPosition(self.dataSource.intensityProfiles.iloc[i])
-            self._trackedPositions[i] = position
-            self.dataSource.refreshResults()
+        for i in range(0, self.dataSource.sourceLength):
+            self.locateAtIndexLocation(i, refreshDataSource = False)
             if i%10 == 0:
                 self.dataSource.setCurrentIndexLocation(i)
-                time.sleep(0.01)
-
-        self.dataSource.refreshResults()
-            
+                self.dataSource.refreshResults()
+        
+        if refreshDataSource == True:
+            self.dataSource.refreshResults()
+        
 
     
     def locateAllAsync(self):
@@ -348,6 +366,8 @@ class TrackableFeature(q.QObject):
     def setRegion(self,region):
         self.region[0] = region[0]
         self.region[1] = region[1]
+        self._tracker.setXmin(region[0])
+        self._tracker.setXmax(region[1])
         self.regionChanged.emit(region)
 
     def getLowerLimit(self):
@@ -367,9 +387,78 @@ class TrackableFeature(q.QObject):
             self.regionChanged.emit(tuple(self.region))
         
     
+class TrackableFeaturePair(q.QObject):
 
+    @property
+    def dataSource(self):
+        return self._dataSource
 
+    def __init__(self, dataSource, parent=None):
+        super(TrackableFeaturePair, self).__init__(parent=None)
+
+        assert isinstance(dataSource,DataSource)
+        self._dataSource = dataSource
+        
+        self.movingFeature = TrackableFeature("moving","mp", dataSource)
+        self.referenceFeature = TrackableFeature("reference", "ref", dataSource)
+
+        #connect signals and slots
+        self._dataSource.resultDataCleared.connect(self.clearTrackedPositions)
+
+    def initializeTrackers(self):
+        """
+        Initializes the trackers for the moving feature and the reference feature and adds a differtial result array to the datasource.
+        """
+        self.referenceFeature.initializeTracker();
+        self.movingFeature.initializeTracker();
+
+        self._differentialResultColumn = self._dataSource.getOrCreateResultColumn("displacement_diff")
+
+    def clearTrackedPositions(self):
+        self._differentialResultColumn = None
+
+    def locateAtIndexLocation(self, i, refreshDataSource = True):
+        movingPeakPosition = self.movingFeature.locateAtIndexLocation(i,refreshDataSource=False)
+        referencePeakPosition = self.referenceFeature.locateAtIndexLocation(i,refreshDataSource=False)
+        differentialPosition = movingPeakPosition - referencePeakPosition
+        self._differentialResultColumn[i] = differentialPosition
+        
+        if refreshDataSource == True:
+            self.dataSource.refreshResults()
+
+    
+    def locateInCurrent(self):
+        self.locateAtIndexLocation(self.dataSource.currentIndexLocation)
+        
+    def locateAll(self, refreshDataSource=True):
+        """
+        Searches all the intensityProfiles in the dataSource for the feature
+        """
+
+        updateInterval = 10
+
+        for i in range(0, self.dataSource.sourceLength):
+            self.locateAtIndexLocation(i, refreshDataSource = False)
+            if i%10 == 0:
+                self.dataSource.setCurrentIndexLocation(i)
+                self.dataSource.refreshResults()
+        
+        if refreshDataSource == True:
+            self.dataSource.refreshResults()
         
 
+    def locateAllAsync(self):
+        that = self
+
+        class AnalyzerThread(q.QThread):
+            def run(self):
+                that.locateAll()
+
+        self.analyzerThread = AnalyzerThread()
+        self.analyzerThread.start()
+        return self.analyzerThread
         
+
+
+    
     
