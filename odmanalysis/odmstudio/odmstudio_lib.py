@@ -325,7 +325,7 @@ class TrackableFeature(q.QObject):
         updateInterval = 10
 
         for i in range(0, self.dataSource.sourceLength):
-            self.locateInCurrent(refreshDataSource = False)
+            self.locateAtIndexLocation(i, refreshDataSource = False)
             if i%10 == 0:
                 self.dataSource.setCurrentIndexLocation(i)
                 self.dataSource.refreshResults()
@@ -410,14 +410,13 @@ class TrackableFeaturePair(q.QObject):
 
         updateInterval = 10
 
-        for i in range(self.dataSource.currentIndexLocation, self.dataSource.sourceLength):
+        for i in range(0, self.dataSource.sourceLength):
             self.locateInCurrent()
             if i%10 == 0:
                 self.dataSource.setCurrentIndexLocation(i)
-                time.sleep(0.01)
+                self.dataSource.refreshResults()
 
-        if refreshDataSource == True:
-            self.dataSource.refreshResults()
+        self.dataSource.refreshResults()
         
 
     def locateAllAsync(self):
