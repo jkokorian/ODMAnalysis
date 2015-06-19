@@ -557,9 +557,13 @@ class IntensityProfilePlotWidget(qt.QWidget):
         
 
         # connect signals
-        self.stepSlider.valueChanged.connect(self.stepSpinBox.setValue)
-        self.stepSpinBox.valueChanged.connect(self.dataSource.setCurrentIndexLocation)
-        self.dataSource.currentIndexLocationChanged.connect(self.stepSlider.setValue)
+        self.currentIndexObserver = Observer()
+        self.currentIndexObserver.bindToProperty(self.stepSpinBox, "value")
+        self.currentIndexObserver.bindToProperty(self.stepSlider, "value")
+        self.currentIndexObserver.bind(self.dataSource, self.dataSource.setCurrentIndexLocation, self.dataSource.currentIndexLocationChanged)
+        #self.stepSlider.valueChanged.connect(self.stepSpinBox.setValue)
+        #self.stepSpinBox.valueChanged.connect(self.dataSource.setCurrentIndexLocation)
+        #self.dataSource.currentIndexLocationChanged.connect(self.stepSlider.setValue)
 
         self.dataSource.currentIndexLocationChanged.connect(self.showStep)
         
@@ -600,6 +604,7 @@ class IntensityProfilePlotWidget(qt.QWidget):
         pw.setYRange(0, 10000)
         
         pw.setAutoVisible(y=True)
+        pw.getPlotItem().enableAutoScale()
     
     
 
@@ -655,6 +660,7 @@ class DisplacementPlotWidget(qt.QWidget):
         pw.setYRange(0, 10)
         
         pw.setAutoVisible(y=True)
+        pw.getPlotItem().enableAutoScale()
         
 
     def updatePlot(self):
