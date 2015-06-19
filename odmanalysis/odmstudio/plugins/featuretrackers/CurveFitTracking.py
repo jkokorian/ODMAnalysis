@@ -24,7 +24,7 @@ class SimpleSplineTracker(lib.FeatureTracker):
         self.xValues = np.arange(len(intensityProfile))
                     
     def findNextPosition(self,intensityProfile):
-        popt,pcov = curve_fit(self.fitFunction, self.xValues[self.rangeSlice],intensityProfile[self.rangeSlice],self.p0,maxfev=10000)
+        popt,pcov = curve_fit(self.fitFunction, self.xValues[self.rangeSlice],intensityProfile[self.xmin:self.xmax],self.p0,maxfev=10000)
         self.p0 = popt
         return self.fitFunction.getDisplacement(*popt)
 

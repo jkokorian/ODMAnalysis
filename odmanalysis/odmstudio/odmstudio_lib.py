@@ -354,6 +354,8 @@ class TrackableFeature(q.QObject):
     def setRegion(self,region):
         self.region[0] = region[0]
         self.region[1] = region[1]
+        self._tracker.setXmin(region[0])
+        self._tracker.setXmax(region[1])
         self.regionChanged.emit(region)
 
     def getLowerLimit(self):
@@ -385,7 +387,7 @@ class TrackableFeaturePair(q.QObject):
         assert isinstance(dataSource,DataSource)
         self._dataSource = dataSource
         
-        self.movingFeature = TrackableFeature("moving","mp",dataSource)
+        self.movingFeature = TrackableFeature("moving","mp", dataSource)
         self.referenceFeature = TrackableFeature("reference", "ref", dataSource)
 
     def initializeTrackers(self):
@@ -400,7 +402,7 @@ class TrackableFeaturePair(q.QObject):
     def locateAtIndexLocation(self, i, refreshDataSource = True):
         movingPeakPosition = self.movingFeature.locateAtIndexLocation(i,refreshDataSource=False)
         referencePeakPosition = self.referenceFeature.locateAtIndexLocation(i,refreshDataSource=False)
-        self._differentialResultColumn[self.dataSource.currentIndexLocation] = movingPeakPosition - referencePeakPosition
+        self._differentialResultColumn[i] = movingPeakPosition - referencePeakPosition
         
         if refreshDataSource == True:
             self.dataSource.refreshResults()

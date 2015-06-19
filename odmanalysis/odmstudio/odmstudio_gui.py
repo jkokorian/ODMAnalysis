@@ -448,7 +448,63 @@ class TrackableFeatureWidget(qt.QWidget,PlotController):
             xMaximum = len(self.trackableFeature.dataSource.intensityProfiles.iloc[0])
             self.regionSpinBoxControl.setSpinBoxMaxima(xMaximum)
 
+
+class TrackableFeaturePairWidget(qt.QWidget, PlotController):
+    def __init__(self, trackableFeaturePair, parent=None):
+        qt.QWidget.__init__(self,parent=parent)
+        PlotController.__init__(self,parent=parent)
+
+        assert isinstance(trackableFeaturePair, lib.TrackableFeaturePair)
+        self.__trackableFeaturePair = trackableFeaturePair
+
+        layout = qt.QVBoxLayout()
+
+        self.movingFeatureWidget = TrackableFeatureWidget(trackableFeaturePair.movingFeature, parent=self)
+        layout.addWidget(self.movingFeatureWidget)
+
+        self.referenceFeatureWidget = TrackableFeatureWidget(trackableFeaturePair.referenceFeature, parent=self)
+        layout.addWidget(self.referenceFeatureWidget)
+
+
+
+
+        #actions
+        self.initializeTrackerAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_BrowserReload),"Initialize",self)
+        self.locateInCurrentAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaPlay),"Find in current profile",self)
+        self.locateAllAction = qt.QAction(self.style().standardIcon(qt.QStyle.SP_MediaSeekForward),"Find in all profiles",self)
+
+        
+
+        #featureTrackerControls
+        buttonsLayout = qt.QHBoxLayout()
+        self.initializeButton = qt.QToolButton(self)
+        self.initializeButton.setDefaultAction(self.initializeTrackerAction)
+        self.findInCurrentProfileButton = qt.QToolButton(self)
+        self.findInCurrentProfileButton.setDefaultAction(self.locateInCurrentAction)
+        self.findInAllProfilesButton = qt.QToolButton(self)
+        self.findInAllProfilesButton.setDefaultAction(self.locateAllAction)
+        
+        
+        buttonsLayout.addStretch()
+        buttonsLayout.addWidget(self.initializeButton)
+        buttonsLayout.addWidget(self.findInCurrentProfileButton)
+        buttonsLayout.addWidget(self.findInAllProfilesButton)
+        layout.addLayout(buttonsLayout)
+
+        
+        #connect signals and slots
+        self.initializeTrackerAction.triggered.connect(self.__trackableFeaturePair.initializeTrackers)
+        self.locateAllAction.triggered.connect(self.__trackableFeaturePair.locateAll)
+        self.locateInCurrentAction.triggered.connect(self.__trackableFeaturePair.locateInCurrent)
+
+        self.setLayout(layout)
     
+    def connectToPlotWidget(self, plotWidget):
+        super(TrackableFeaturePairWidget, self).connectToPlotWidget(plotWidget)
+        self.movingFeatureWidget.connectToPlotWidget(plotWidget)
+        self.referenceFeatureWidget.connectToPlotWidget(plotWidget)
+
+
     
                 
 
@@ -576,10 +632,17 @@ class DisplacementPlotWidget(qt.QWidget):
 
     def __initializePlots(self):
         pw = self.plotWidget
+
+        self.displacement_mpPlot = pw.plot()
+        self.displacement_mpPlot.setPen((200,200,100))
         
-        self.dataPlot = pw.plot()
-        self.dataPlot.setPen((200,200,100))
-        
+        self.displacement_refPlot = pw.plot()
+        self.displacement_refPlot.setPen((200,100,200))
+
+        self.displacement_diffPlot = pw.plot()
+        self.displacement_diffPlot.setPen((100,200,200))
+
+
         self.xValues = np.arange(self.dataSource.resultsLength)
         
         pw.setLabel('left', 'Displacement', units='px')
@@ -588,12 +651,20 @@ class DisplacementPlotWidget(qt.QWidget):
         pw.setYRange(0, 10)
         
         pw.setAutoVisible(y=True)
+        
 
     def updatePlot(self):
+        self.xValues = np.arange(self.dataSource.resultsLength)
         if "displacement_mp" in self.dataSource.resultsDataFrame.columns:
-            self.xValues = np.arange(self.dataSource.resultsLength)
             yValues = self.dataSource.getOrCreateResultColumn("displacement_mp")
-            self.dataPlot.setData(x=self.xValues, y=yValues)
+            self.displacement_mpPlot.setData(x=self.xValues, y=yValues)
+        if "displacement_ref" in self.dataSource.resultsDataFrame.columns:
+            yValues = self.dataSource.getOrCreateResultColumn("displacement_ref")
+            self.displacement_refPlot.setData(x=self.xValues, y=yValues)
+        if "displacement_dif" in self.dataSource.resultsDataFrame.columns:
+            yValues = self.dataSource.getOrCreateResultColumn("displacement_diff")
+            self.displacement_diffPlot.setData(x=self.xValues, y=yValues)
+
         
 
 class ODMStudioMainWindow(qt.QMainWindow):
@@ -622,14 +693,11 @@ class ODMStudioMainWindow(qt.QMainWindow):
         self.fileOpener = FileOpener(self.dataSource, parent=self)
         self.intensityProfilePlot = IntensityProfilePlotWidget(self.dataSource, parent=self)
 
-        movingFeature = lib.TrackableFeature("moving feature", "mp", self.dataSource)
-        referenceFeature = lib.TrackableFeature("reference feature", "ref", self.dataSource)        
+
+        featurePair = lib.TrackableFeaturePair(self.dataSource)
         
-        self.movingFeatureWidget = TrackableFeatureWidget(movingFeature, parent=self)
-        self.referenceFeatureWidget = TrackableFeatureWidget(referenceFeature, parent=self)
-        self.movingFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
-        self.referenceFeatureWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
-        
+        self.featurePairWidget = TrackableFeaturePairWidget(featurePair, parent=self)
+        self.featurePairWidget.connectToPlotWidget(self.intensityProfilePlot.plotWidget)
         
         
         intensityProfileDock = dock.Dock("Intensity Profiles", size=(500, 500))     ## give this dock the minimum possible size
@@ -642,8 +710,8 @@ class ODMStudioMainWindow(qt.QMainWindow):
         
         featureTrackersDock = dock.Dock("Feature Trackers", size=(100,400))
         area.addDock(featureTrackersDock, 'right', intensityProfileDock)
-        featureTrackersDock.addWidget(self.movingFeatureWidget)
-        featureTrackersDock.addWidget(self.referenceFeatureWidget)
+        featureTrackersDock.addWidget(self.featurePairWidget)
+        
 
 
         #setup statusbar
