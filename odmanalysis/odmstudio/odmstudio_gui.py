@@ -110,6 +110,7 @@ class FileOpener(qt.QWidget):
 
         SRWidget = fw.WidgetFactory.getWidgetClassFor(srRegistration.sourceReaderType)
         
+        self.dataSource.clearResults()
 
         if SRWidget is not None:
             self.sourceReaderWidget = SRWidget(self.sourceReader,parent=self)
@@ -155,6 +156,7 @@ class FileOpener(qt.QWidget):
     @property
     def dataSource(self):
         return self.__dataSource
+
 
     def _setDataSource(self,dataSource):
         assert isinstance(dataSource,lib.DataSource)
@@ -494,7 +496,7 @@ class TrackableFeaturePairWidget(qt.QWidget, PlotController):
         
         #connect signals and slots
         self.initializeTrackerAction.triggered.connect(self.__trackableFeaturePair.initializeTrackers)
-        self.locateAllAction.triggered.connect(self.__trackableFeaturePair.locateAll)
+        self.locateAllAction.triggered.connect(self.__trackableFeaturePair.locateAllAsync)
         self.locateInCurrentAction.triggered.connect(self.__trackableFeaturePair.locateInCurrent)
 
         self.setLayout(layout)
@@ -661,7 +663,7 @@ class DisplacementPlotWidget(qt.QWidget):
         if "displacement_ref" in self.dataSource.resultsDataFrame.columns:
             yValues = self.dataSource.getOrCreateResultColumn("displacement_ref")
             self.displacement_refPlot.setData(x=self.xValues, y=yValues)
-        if "displacement_dif" in self.dataSource.resultsDataFrame.columns:
+        if "displacement_diff" in self.dataSource.resultsDataFrame.columns:
             yValues = self.dataSource.getOrCreateResultColumn("displacement_diff")
             self.displacement_diffPlot.setData(x=self.xValues, y=yValues)
 

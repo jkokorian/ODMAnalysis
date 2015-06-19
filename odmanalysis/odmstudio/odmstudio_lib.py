@@ -19,6 +19,7 @@ class DataSource(q.QObject):
 
     sourceDataChanged = q.pyqtSignal(pd.DataFrame)
     resultDataChanged = q.pyqtSignal(pd.DataFrame)
+    resultDataCleared = q.pyqtSignal()
     sourcePathChanged = q.pyqtSignal(str)
     currentIndexLocationChanged = q.pyqtSignal(int)
 
@@ -94,6 +95,11 @@ class DataSource(q.QObject):
     def clear(self):
         self.setSourceDataFrame(DataSource.createDefaultSourceDataFrame())
         self.setSourcePath("")
+
+    def clearResults(self):
+        self.__resultArrays = {}
+        self.__resultsDataFrame = DataSource.createDefaultResultsDataFrame()
+        self.resultDataCleared.emit()
 
     def createResultColumn(self,name,dtype='float'):
         if not self.__resultArrays.has_key(name):
@@ -283,6 +289,9 @@ class TrackableFeature(q.QObject):
         self._dataSource = dataSource
         self._trackedPositions = np.array([])
 
+        #connect signals and slots
+        self._dataSource.resultDataCleared.connect(self.clearTrackedPositions)
+
     def setTracker(self,tracker):
         self._tracker = tracker
     
@@ -299,7 +308,9 @@ class TrackableFeature(q.QObject):
         self.tracker.initialize(self.dataSource.currentIntensityProfile)
         self._trackedPositions = self.dataSource.getOrCreateResultColumn("displacement_%s" % self.shortName)
         
-    
+    def clearTrackedPositions(self):
+        self._trackedPositions = None
+
     def locateAtIndexLocation(self, i, refreshDataSource=True):
         """
         Searches the the i'th intensity profile of the datasource within the limits for the feature using the tracker
@@ -390,6 +401,9 @@ class TrackableFeaturePair(q.QObject):
         self.movingFeature = TrackableFeature("moving","mp", dataSource)
         self.referenceFeature = TrackableFeature("reference", "ref", dataSource)
 
+        #connect signals and slots
+        self._dataSource.resultDataCleared.connect(self.clearTrackedPositions)
+
     def initializeTrackers(self):
         """
         Initializes the trackers for the moving feature and the reference feature and adds a differtial result array to the datasource.
@@ -399,17 +413,21 @@ class TrackableFeaturePair(q.QObject):
 
         self._differentialResultColumn = self._dataSource.getOrCreateResultColumn("displacement_diff")
 
+    def clearTrackedPositions(self):
+        self._differentialResultColumn = None
+
     def locateAtIndexLocation(self, i, refreshDataSource = True):
         movingPeakPosition = self.movingFeature.locateAtIndexLocation(i,refreshDataSource=False)
         referencePeakPosition = self.referenceFeature.locateAtIndexLocation(i,refreshDataSource=False)
-        self._differentialResultColumn[i] = movingPeakPosition - referencePeakPosition
+        differentialPosition = movingPeakPosition - referencePeakPosition
+        self._differentialResultColumn[i] = differentialPosition
         
         if refreshDataSource == True:
             self.dataSource.refreshResults()
 
     
     def locateInCurrent(self):
-        locateAtIndexLocation(self.dataSource.currentIndexLocation)
+        self.locateAtIndexLocation(self.dataSource.currentIndexLocation)
         
     def locateAll(self, refreshDataSource=True):
         """
