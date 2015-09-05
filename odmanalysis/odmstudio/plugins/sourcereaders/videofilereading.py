@@ -7,6 +7,7 @@ import PyQt4.QtCore as q
 import PyQt4.QtGui as qt
 import pyqtgraph as pg
 from pyqt2waybinding import Observer
+import moviepy.editor
 
 @framework.RegisterSourceReader("Video files", extensions=('avi','mpg'), maxNumberOfFiles=1)
 class VideoReader(lib.SourceReader):
@@ -29,18 +30,22 @@ class VideoReader(lib.SourceReader):
 
     
     @property
+    def currentFrameTime(self):
+        return self.currentFrameIndex / self.frameRate
+
+    @property
     def frameRate(self):
-        value = self.__videoCapture.get(5)
+        value = self.__clip.fps
         return value
 
     @property
     def frameCount(self):
-        value = int(self.__videoCapture.get(7))
+        value = int(self.__clip.duration * self.frameRate)
         return value
 
     @property
     def frameSize(self):
-        value = (self.__videoCapture.get(3), self.__videoCapture.get(4))
+        value = (self.__clip.w, self.__clip.h)
         return value
 
     @property
@@ -68,25 +73,22 @@ class VideoReader(lib.SourceReader):
         self.__roi = pg.ROI((0,0))
         self.__imageItem = pg.ImageItem()
         self.__currentFrame = None
+        self.__clip = None
 
     def _initializeVideoCapture(self):
-        self.__videoCapture = cv2.VideoCapture(self.sourcePath)
+        self.__clip = moviepy.editor.VideoFileClip(self.sourcePath)
         
         self.currentFrameIndex = 0
         self.__roi.setSize([s/5.0 for s in self.frameSize])
 
     def _closeVideoCapture(self):
-        self.__videoCapture.release()
+        pass
 
 
     def grabFrameAtIndex(self):
-        if self.__videoCapture.isOpened():
-            vid = self.__videoCapture
-            vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES,self.currentFrameIndex)
-            if self.__currentFrame is not None:
-                vid.read(self.__currentFrame)
-            else:
-                retval, self.__currentFrame = vid.read()
+        if self.__clip is not None:
+            clip = self.__clip
+            self.__currentFrame = clip.get_frame(self.currentFrameTime)
             
             self.imageItem.setImage(self.__currentFrame)
 
@@ -95,27 +97,25 @@ class VideoReader(lib.SourceReader):
         path = self.sourcePath
         super(VideoReader, self).read()
 
-        vid = cv2.VideoCapture(path)
 
-        frameCount = int(vid.get(7))
-        frameRate = vid.get(5)
-        frameSize = (vid.get(3),vid.get(4))
+        frameCount = self.frameCount
+        frameRate = self.frameRate
+        frameSize = self.frameSize
         
         np.arange(frameCount)/frameRate
 
         framesRead = 0
         intensityProfiles = []
         timeSteps = np.arange(frameCount)/frameRate
-
-        for i in range(frameCount):
-            self.currentFrameIndex = i
-            self.grabFrameAtIndex()
+        
+        for i,frame in enumerate(self.__clip.iter_frames()):
+            self.__currentFrame = frame
 
             line = self.currentRegionOfInterest.sum(axis=2).sum(axis=1)
             
             intensityProfiles.append(line)
 
-            framesRead += 1
+            framesRead = i+1
             self.dataSource.setSourceDataFrame(pd.DataFrame(data={'intensityProfile': intensityProfiles, 'timeStep': timeSteps[0:framesRead]}))
 
             self._setProgress((framesRead*100)/frameCount)
