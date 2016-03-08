@@ -361,7 +361,7 @@ class OpticsSettings(object):
     
     
 class ODAFitSettings(object):
-    def __init__(self,fitFunction,estimatorValuesDict):
+    def __init__(self,fitFunction,estimatorValuesDict, templateProfile=None):
         self.xminBound = int(round(estimatorValuesDict['minBound'][0]))
         self.xmaxBound = int(round(estimatorValuesDict['maxBound'][0]))
         self.fitFunction = fitFunction
@@ -392,7 +392,7 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
     
     intensityProfiles : pandas.Series of 1D numpy.ndarray
         A series of intensityProfiles that will be curve fit
-    peakFitSettings : CurveFitSettings instance
+    peakFitSettings : ODAFitSettings instance
         The curve fit settings to use for curve fitting
     progressReporter : ProgressReporter instance
         The ProgressReporter to use for displaying progress information. 
@@ -417,7 +417,8 @@ def calculatePeakDisplacements(intensityProfiles, peakFitSettings, progressRepor
     if pInitial is not None:        
         p0 = pInitial
     else:
-        estimatesDict = fitFunction.estimateInitialParameters(intensityProfiles.iloc[0], **peakFitSettings.estimatorValuesDict)
+        templateProfile = peakFitSettings.referenceIntensityProfile if peakFitSettings.referenceIntensityProfile is not None else intensityProfiles.iloc[0]
+        estimatesDict = fitFunction.estimateInitialParameters(templateProfile, **peakFitSettings.estimatorValuesDict)
         p0 = estimatesDict.values()
         
     xmin = peakFitSettings.xminBound
