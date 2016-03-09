@@ -79,8 +79,9 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None,referenceIPDat
     
     if referenceIPDataFile is not None:
         print "using the first profile from %s for initializing the fit functions" % referenceIPDataFile
-        reader = odm.getODMDataReader(referenceIPDataFile, chunksize=1)
-        referenceIntensityProfile = reader.next().intensityProfile.iloc[0]
+        for chunk in odm.getODMDataReader(referenceIPDataFile, chunksize=1):
+            referenceIntensityProfile = chunk.intensityProfile.iloc[0]
+            break
     else:
         referenceIntensityProfile = df.intensityProfile.iloc[0]
     
