@@ -28,7 +28,7 @@ import pickle
 import argparse
 
 
-def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
+def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None,referenceIPDataFile=None):
     """
     This script opens and analyzes the target data.csv file produced by LabVIEW and
     analyzes the optical displacement of a peak relative to another peak.
@@ -40,6 +40,9 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
     filename: string
         Path to the data.csv file produced by LabVIEW that contains the raw 
         Optical Displacement Measurement Data.
+    referenceIPDataFile: string
+        Path the data.csv file of which the first intensity profile will be used
+        as a reference for initializing the fit function.
     
     
     Returns
@@ -69,8 +72,19 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
         gui.getSettingsFromUser(settings)
 
     
+    
+
+    
     df = odm.readODMData(filename)
     
+    if referenceIPDataFile is not None:
+        print "using the first profile from %s for initializing the fit functions" % referenceIPDataFile
+        reader = odm.getODMDataReader(referenceIPDataFile, chunksize=1)
+        referenceIntensityProfile = reader.next().intensityProfile.iloc[0]
+    else:
+        referenceIntensityProfile = df.intensityProfile.iloc[0]
+    
+
     if (fitSettingsFile is not None):
         with file(fitSettingsFile,'r') as f:
             print "reading fit settings from %s" % fitSettingsFile
@@ -80,20 +94,27 @@ def fitRawODMData(filename,settingsFile=None,fitSettingsFile=None):
         
     else:
         movingPeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],movingPeakFitFunction,
+        movingPeakFitSettings = gui.getPeakFitSettingsFromUser(referenceIntensityProfile,movingPeakFitFunction,
                                                            estimatorPromptPrefix="Moving peak:",
                                                            windowTitle="Moving Peak estimates")
         
         try:
             referencePeakFitFunction = ff.createFitFunction(settings.defaultFitFunction)
-            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(df.intensityProfile.iloc[1],referencePeakFitFunction,
+            referencePeakFitSettings = gui.getPeakFitSettingsFromUser(referenceIntensityProfile,referencePeakFitFunction,
                                                                       estimatorPromptPrefix="Reference peak:",
                                                                       windowTitle="Reference Peak estimates")
         except: #exception occurs if user cancels the 'dialog'
             referencePeakFitFunction = None        
             referencePeakFitSettings = None
             print 'no reference'
-        
+    
+
+    movingPeakFitSettings.referenceIntensityProfile = referenceIntensityProfile
+    referencePeakFitSettings.referenceIntensityProfile = referenceIntensityProfile
+
+
+
+
     print "fitting a %s function..." % settings.defaultFitFunction
     df_movingPeak = odm.calculatePeakDisplacements(df.intensityProfile, movingPeakFitSettings, factor=100,maxfev=20000)
     
