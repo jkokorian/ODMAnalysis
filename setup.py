@@ -38,7 +38,8 @@ setup(name='odmanalysis',
           'scipy',
           'pandas',
           'matplotlib',
-          'watchdog'
+          'watchdog',
+          'attrdict'
           ],
       entry_points={
           'console_scripts': [
