@@ -157,7 +157,7 @@ def getODMDataReader(dataFilePath,chunksize=2005,skipDataRows=0):
                         header=None,
                         names=['timestamp','relativeTime','actuatorVoltage','intensityProfile'],
                         index_col='timestamp',
-                        parse_dates='timestamp',
+                        parse_dates=True,
                         skiprows=skipDataRows + 1,
                         chunksize = chunksize,
                         converters = {'intensityProfile': ipStringToArray})

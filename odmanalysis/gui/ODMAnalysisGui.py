@@ -19,8 +19,9 @@ Created on Mon Sep 16 13:46:39 2013
 @author: jkokorian
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import wx
 import sys
 from odmanalysis import fitfunctions as FitFunctions
@@ -216,8 +217,10 @@ class CurveFitSettingsDialog(QDialog):
         grid.addWidget(buttonBox,3,0,1,2)    
         self.setLayout(grid)
         
-        self.connect(buttonBox, SIGNAL("accepted()"),self, SLOT("accept()"))
-        self.connect(buttonBox, SIGNAL("rejected()"),self, SLOT("reject()"))
+        #self.connect(buttonBox, SIGNAL("accepted()"),self, SLOT("accept()"))
+        #self.connect(buttonBox, SIGNAL("rejected()"),self, SLOT("reject()"))
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
         self.setWindowTitle("Choose fit function")
 
     def accept(self):
@@ -226,6 +229,9 @@ class CurveFitSettingsDialog(QDialog):
         self.xkcd = self.xkcdCheckBox.isChecked()
         QDialog.accept(self)
     
+    def reject(self):
+        pass
+
     def getFitFunction(self):
         return self.fitFunction
     
@@ -241,7 +247,7 @@ class StandaloneCurveFitSettingsDialog(QApplication):
         super(StandaloneCurveFitSettingsDialog,self).__init__(argv)
         self.dialog = CurveFitSettingsDialog(fitFunctions,curveFitSettings)
         self._hasClosed = False
-        self.connect(self, SIGNAL("lastWindowClosed()"),self.onClose)
+        self.lastWindowClosed.connect(self.onClose)
         
     def exec_(self):
         self.dialog.show()
