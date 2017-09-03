@@ -217,3 +217,4 @@ setup.bat
 /testdata
 /CurveFitScriptSettings.ini
 /odmanalysis/scripts/CurveFitScriptSettings.ini
+.vscode

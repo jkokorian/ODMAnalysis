@@ -188,7 +188,7 @@ def readAnalysisData(dataFilePath,readSettings=True,read_csv_kwargs=dict()):
         set to 'timestamp'.
     """
 
-    df = _pd.read_csv(dataFilePath,index_col='timestamp',parse_dates='timestamp',**read_csv_kwargs)
+    df = _pd.read_csv(dataFilePath,index_col='timestamp',parse_dates=True,**read_csv_kwargs)
     
     commonpath = _os.path.split(dataFilePath)[0]
     try:
